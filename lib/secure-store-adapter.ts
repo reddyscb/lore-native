@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as aesjs from 'aes-js';
+import * as SecureStore from 'expo-secure-store';
 import 'react-native-get-random-values';
 
 /**
@@ -17,17 +17,65 @@ import 'react-native-get-random-values';
  * pattern for Expo apps that need session data at rest to be encrypted.
  */
 class LargeSecureStore {
+  private readonly memoryStore = new Map<string, string>();
+
+  private get isWeb(): boolean {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  }
+
+  private get hasWindowStorage(): boolean {
+    return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  }
+
   private async getEncryptionKey(keyName: string): Promise<Uint8Array> {
-    let key = await SecureStore.getItemAsync(keyName);
-    if (!key) {
-      key = aesjs.utils.hex.fromBytes(crypto.getRandomValues(new Uint8Array(32)));
-      await SecureStore.setItemAsync(keyName, key);
+    if (this.isWeb) {
+      try {
+        const existingKey = this.hasWindowStorage ? window.localStorage.getItem(keyName) : this.memoryStore.get(keyName);
+        if (existingKey) {
+          return aesjs.utils.hex.toBytes(existingKey);
+        }
+
+        const newKey = aesjs.utils.hex.fromBytes(crypto.getRandomValues(new Uint8Array(32)));
+        if (this.hasWindowStorage) {
+          window.localStorage.setItem(keyName, newKey);
+        } else {
+          this.memoryStore.set(keyName, newKey);
+        }
+        return aesjs.utils.hex.toBytes(newKey);
+      } catch (error) {
+        console.warn('Web session key storage failed. Falling back to memory.', error);
+        const fallbackKey = aesjs.utils.hex.fromBytes(crypto.getRandomValues(new Uint8Array(32)));
+        this.memoryStore.set(keyName, fallbackKey);
+        return aesjs.utils.hex.toBytes(fallbackKey);
+      }
     }
-    return aesjs.utils.hex.toBytes(key);
+
+    try {
+      let key = await SecureStore.getItemAsync(keyName);
+      if (!key) {
+        key = aesjs.utils.hex.fromBytes(crypto.getRandomValues(new Uint8Array(32)));
+        await SecureStore.setItemAsync(keyName, key);
+      }
+      return aesjs.utils.hex.toBytes(key);
+    } catch (error) {
+      console.warn('SecureStore unavailable. Falling back to AsyncStorage.', error);
+      return aesjs.utils.hex.toBytes(aesjs.utils.hex.fromBytes(crypto.getRandomValues(new Uint8Array(32))));
+    }
   }
 
   async getItem(key: string): Promise<string | null> {
-    const encrypted = await AsyncStorage.getItem(key);
+    let encrypted: string | null = null;
+
+    try {
+      if (this.isWeb) {
+        encrypted = this.hasWindowStorage ? window.localStorage.getItem(key) : this.memoryStore.get(key) ?? null;
+      } else {
+        encrypted = await AsyncStorage.getItem(key);
+      }
+    } catch (error) {
+      console.warn('Session getItem failed.', error);
+    }
+
     if (!encrypted) return null;
 
     const keyName = `${key}_key`;
@@ -52,12 +100,41 @@ class LargeSecureStore {
 
     const ivHex = aesjs.utils.hex.fromBytes(iv);
     const dataHex = aesjs.utils.hex.fromBytes(encryptedBytes);
-    await AsyncStorage.setItem(key, `${ivHex}:${dataHex}`);
+
+    try {
+      if (this.isWeb) {
+        if (this.hasWindowStorage) {
+          window.localStorage.setItem(key, `${ivHex}:${dataHex}`);
+        } else {
+          this.memoryStore.set(key, `${ivHex}:${dataHex}`);
+        }
+        return;
+      }
+
+      await AsyncStorage.setItem(key, `${ivHex}:${dataHex}`);
+    } catch (error) {
+      console.warn('Session setItem failed.', error);
+    }
   }
 
   async removeItem(key: string): Promise<void> {
-    await AsyncStorage.removeItem(key);
-    await SecureStore.deleteItemAsync(`${key}_key`);
+    try {
+      if (this.isWeb) {
+        if (this.hasWindowStorage) {
+          window.localStorage.removeItem(key);
+          window.localStorage.removeItem(`${key}_key`);
+        } else {
+          this.memoryStore.delete(key);
+          this.memoryStore.delete(`${key}_key`);
+        }
+        return;
+      }
+
+      await AsyncStorage.removeItem(key);
+      await SecureStore.deleteItemAsync(`${key}_key`);
+    } catch (error) {
+      console.warn('Session removeItem failed.', error);
+    }
   }
 }
 

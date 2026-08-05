@@ -1,5 +1,5 @@
-import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
 import { largeSecureStore } from './secure-store-adapter';
 
 // Same Supabase project as the web app (lore-app-iota.vercel.app).
@@ -7,11 +7,14 @@ import { largeSecureStore } from './secure-store-adapter';
 // the exact same backend, just through a native client instead of Next.js
 // Server Components.
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+const supabasePublishableKey =
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+  '';
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error(
-    'Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY — check your .env file.'
+    'Missing EXPO_PUBLIC_SUPABASE_URL or Supabase publishable key — check your .env file.'
   );
 }
 
