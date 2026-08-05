@@ -1,50 +1,122 @@
-# Welcome to your Expo app 👋
+# lore. — native (Phase 1: foundation)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+The React Native rewrite of [lore-app](https://github.com/reddyscb/lore-app),
+built for a genuinely native, smooth iOS experience. Full context for how
+this fits together lives in [`CLAUDE.md`](./CLAUDE.md) — read that first if
+you're picking this up in a new session.
 
-## Get started
+**What's real in this build:**
 
-1. Install dependencies
+- Google sign-in and phone OTP, both backed by the same live Supabase Auth
+  the web app uses
+- A working design system ported from the web app's cream/raspberry/mustard
+  palette and Fraunces/Inter/Space Mono type system
+- Tab navigation shell (Home, Explore, Drop lore, Passport, Profile) with
+  auth-gated routing — logged-out users can't reach the tabs, and new users
+  get routed through onboarding automatically
+- A real Profile screen showing your actual `profiles` row and a working
+  sign-out
 
-   ```bash
-   npm install
-   ```
+**What's not built yet (next phases):** the actual home feed, café detail
+pages, drop posting, collections, owner dashboard, events/tickets, passport/
+diary, and everything Android. See the phase plan in `CLAUDE.md`.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 1. Scaffold the project
 
-In the output, you'll find options to open the app in a
+This repo is an overlay, not a full scaffold — it assumes a fresh Expo
+project as the base so you always get current, correctly-versioned
+dependencies rather than whatever versions were current when this was
+written.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+npx create-expo-app@latest lore-native
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then copy every file from this overlay into the newly created `lore-native`
+folder, overwriting where they collide **except `app.json`** (see step 3).
 
-## Learn more
+## 2. Install the additional packages this phase needs
 
-To learn more about developing your project with Expo, look at the following resources:
+```
+cd lore-native
+npx expo install @supabase/supabase-js react-native-url-polyfill \
+  @react-native-async-storage/async-storage expo-secure-store \
+  expo-auth-session expo-web-browser expo-crypto \
+  @expo-google-fonts/fraunces @expo-google-fonts/inter @expo-google-fonts/space-mono \
+  expo-font expo-splash-screen react-native-get-random-values
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+npm install aes-js
+npm install --save-dev @types/aes-js
+```
 
-## Join the community
+## 3. Update `app.json`
 
-Join our community of developers creating universal apps.
+Don't overwrite the generated `app.json` — it has asset paths (icons,
+splash) specific to your scaffold. Just add/merge these fields:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```json
+{
+  "expo": {
+    "scheme": "lore",
+    "ios": {
+      "bundleIdentifier": "com.reddyscb.lore",
+      "supportsTablet": false
+    }
+  }
+}
+```
+
+(`scheme` is what makes the Google sign-in deep-link redirect work — see
+CLAUDE.md's "Required manual setup" section for the matching Supabase
+dashboard step.)
+
+## 4. Environment variables
+
+```
+cp .env.example .env
+```
+
+The values are already filled in — same public, RLS-protected Supabase
+project the web app uses, nothing to look up.
+
+## 5. One-time Supabase dashboard step
+
+In the [Supabase dashboard](https://supabase.com/dashboard/project/jgksopmbfttqqngrsama/auth/url-configuration) →
+Authentication → URL Configuration → Redirect URLs, add:
+
+```
+lore://**
+```
+
+Without this, Google sign-in will complete in the browser but fail to
+redirect back into the app.
+
+## 6. Run it
+
+```
+npx expo prebuild
+npx expo start
+```
+
+Press `i` to open the iOS simulator, or scan the QR code with the Expo Go
+app on a physical iPhone.
+
+## What to check before moving to Phase 2
+
+- [ ] App opens to the welcome screen with the `lore.` wordmark, fonts
+      rendering correctly (Fraunces headline, Inter body)
+- [ ] Google sign-in completes and lands you in the app (or onboarding, if
+      it's your first time)
+- [ ] Phone sign-in: code arrives by SMS, verifying it signs you in
+- [ ] First-time sign-in lands on the onboarding screen; saving a name
+      takes you straight to the tabs — no manual refresh needed
+- [ ] Returning sign-in (same account, sign out then back in) skips
+      onboarding and goes straight to the tabs
+- [ ] Profile tab shows your real display name and role from Supabase
+- [ ] Sign out returns you to the welcome screen
+
+Once those are solid, tell me and we'll scope Phase 2 — I'd suggest the
+home feed and café detail page next, since that's the core loop, same as
+it was for the web app.

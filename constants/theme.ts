@@ -1,53 +1,65 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * lore. design tokens — ported from the web app's CSS custom properties.
+ *
+ * These hex values are best-effort placeholders based on the named palette
+ * (cream / raspberry / mustard) and the variable names actually seen in the
+ * web codebase (--ink, --ink-soft, --paper, --teal). Swap these for the exact
+ * values from the web app's globals.css if pixel-perfect match matters —
+ * everything in the app reads from this one file, so it's a single edit.
  */
 
-import { Platform } from 'react-native';
+export const colors = {
+  cream: '#F6F1E4', // app background
+  paper: '#FFFCF5', // card / surface, lighter than cream
+  ink: '#1F1B16', // primary text
+  inkSoft: '#6B6255', // secondary / muted text
+  raspberry: '#B23A52', // primary accent, CTAs
+  raspberryDark: '#8E2C40', // pressed state
+  mustard: '#E3A93B', // secondary accent
+  teal: '#2F6F6B', // tertiary accent (avatar badges, etc.)
+  border: '#E4DBC8', // hairline borders on cream/paper
+  danger: '#B23A3A',
+} as const;
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+} as const;
 
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
-};
+export const radii = {
+  sm: 8,
+  md: 12,
+  lg: 18,
+  pill: 999,
+} as const;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const fontFamily = {
+  display: 'Fraunces_600SemiBold', // headings — the pixel-art serif voice
+  displayItalic: 'Fraunces_500Medium_Italic',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_600SemiBold',
+  mono: 'SpaceMono_400Regular', // stamps, timestamps, ticket codes
+} as const;
+
+export const fontSize = {
+  xs: 12,
+  sm: 13.5,
+  base: 15,
+  md: 17,
+  lg: 20,
+  xl: 24,
+  xxl: 30,
+} as const;
+
+// Shared shadow for pixel-art "raised card" feel (used sparingly)
+export const cardShadow = {
+  shadowColor: colors.ink,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 0,
+  elevation: 2,
+} as const;
