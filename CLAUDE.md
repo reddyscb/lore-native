@@ -81,6 +81,12 @@ scheme. This is the browser-sheet flow (not the native Google Sign-In SDK)
 OAuth proxy does the same thing it already does for the web app. See
 `lib/oauth.ts`.
 
+Confirmed working in the **iOS Simulator only**. Testing Google sign-in in
+a plain mobile browser will always redirect into the old web app instead of
+back into this app — expected, not a bug: the deep link back to `lore://`
+only resolves on a device/simulator where iOS has actually registered that
+scheme. Phone OTP has no such caveat and works fine in a browser too.
+
 **Phone OTP** is a direct `supabase.auth.signInWithOtp({ phone })` /
 `verifyOtp(...)` call, same as the web app, no extra native config.
 
@@ -115,13 +121,18 @@ Before Google sign-in will work on a real device:
 Mirrors the web app's phases conceptually, but re-scoped for what a native
 rewrite actually needs:
 
-- **Phase 1 (this one): foundation.** Design system, navigation shell,
+- **Phase 1 — done, pushed to GitHub.** Design system, navigation shell,
   full auth flow (Google + phone + onboarding), wired to the real backend.
-  Tab screens beyond Profile are placeholders.
-- **Phase 2+ (not started):** Home feed, café detail, drop posting +
-  detail/replies, collections, owner dashboard, events/tickets, passport/
-  diary, explore/search — each screen cluster rebuilt as native components
-  against the same Supabase tables the web version already uses.
+  Full Phase 1 test checklist (see README) passed. Tab screens beyond
+  Profile are still placeholders.
+- **Phase 2 — done, verified in Simulator.** Home tab is a real drop feed
+  (`app/(tabs)/index.tsx`); café detail is a new route (`app/place/[id].tsx`)
+  showing place info, the go-for/skip/secret lore fields, dishes, and drops
+  (must-order/skip/vibe-check/etc.) with their replies shown read-only.
+  Data layer is `lib/queries.ts`. Still read-only — no drop posting or
+  reply composing yet. Drop posting + replies UI, collections, owner
+  dashboard, events/tickets, passport/diary, explore/search all remain
+  later phases.
 - **Later:** push notifications, photo/video upload (Supabase Storage —
   not built on web either yet), a dedicated polish pass (list
   virtualization, image caching, transition tuning), then store

@@ -1,10 +1,80 @@
-import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text } from 'react-native';
+import { ScreenContainer } from '@/components/ui/ScreenContainer';
+import { DropCard } from '@/components/ui/DropCard';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
+import { fetchDropFeed, type Drop } from '@/lib/queries';
 
 export default function HomeScreen() {
+  const [drops, setDrops] = useState<Drop[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    const data = await fetchDropFeed();
+    setDrops(data);
+  }, []);
+
+  useEffect(() => {
+    load().finally(() => setLoading(false));
+  }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
+
+  if (loading) {
+    return (
+      <ScreenContainer style={styles.centered}>
+        <ActivityIndicator color={colors.raspberry} />
+      </ScreenContainer>
+    );
+  }
+
   return (
-    <PlaceholderScreen
-      title="Home"
-      note="The real feed (café cards, real Supabase data) lands in Phase 2."
-    />
+    <ScreenContainer padded={false}>
+      <FlatList
+        contentContainerStyle={styles.list}
+        data={drops}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <DropCard drop={item} place={item.places ? { id: item.place_id, ...item.places } : undefined} />
+        )}
+        ListHeaderComponent={<Text style={styles.title}>Home</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>No drops yet — be the first to leave one.</Text>
+        }
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.raspberry} />
+        }
+      />
+    </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
+  },
+  title: {
+    fontFamily: fontFamily.display,
+    fontSize: fontSize.xxl,
+    color: colors.ink,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  empty: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    color: colors.inkSoft,
+    marginTop: spacing.xl,
+    textAlign: 'center',
+  },
+});

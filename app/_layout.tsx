@@ -5,6 +5,7 @@ import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import AuthProvider from '@/providers/auth-provider';
+import { colors, fontFamily } from '@/constants/theme';
 
 // Three mutually-exclusive states, each its own protected branch:
 //  1. logged out              -> (auth) welcome / phone / verify
@@ -17,6 +18,17 @@ function RootNavigator() {
     <Stack>
       <Stack.Protected guard={isLoggedIn && !needsOnboarding}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="place/[id]"
+          options={{
+            title: '',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: colors.cream },
+            headerTintColor: colors.ink,
+            headerTitleStyle: { fontFamily: fontFamily.body },
+            headerShadowVisible: false,
+          }}
+        />
       </Stack.Protected>
 
       <Stack.Protected guard={isLoggedIn && needsOnboarding}>
