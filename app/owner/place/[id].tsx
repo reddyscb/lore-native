@@ -15,7 +15,7 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Chip } from '@/components/ui/Chip';
 import { TextField } from '@/components/ui/TextField';
 import { Button } from '@/components/ui/Button';
-import { colors, fontFamily, spacing } from '@/constants/theme';
+import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { fetchPlace, updatePlaceStatus, updatePlaceTagline, type Place } from '@/lib/queries';
 
 const STATUSES: { id: string; label: string }[] = [
@@ -29,6 +29,7 @@ export default function ManagePlaceScreen() {
 
   const [place, setPlace] = useState<Place | null>(null);
   const [loading, setLoading] = useState(true);
+  const [placeNotFound, setPlaceNotFound] = useState(false);
 
   const [status, setStatus] = useState('open');
   const [reopenDate, setReopenDate] = useState('');
@@ -42,6 +43,8 @@ export default function ManagePlaceScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
+      setPlace(null);
+      setPlaceNotFound(false);
       fetchPlace(id)
         .then((data) => {
           setPlace(data);
@@ -49,6 +52,7 @@ export default function ManagePlaceScreen() {
           setReopenDate(data.reopen_date ?? '');
           setTagline(data.tagline ?? '');
         })
+        .catch(() => setPlaceNotFound(true))
         .finally(() => setLoading(false));
     }, [id])
   );
@@ -82,7 +86,11 @@ export default function ManagePlaceScreen() {
   if (loading || !place) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
-        <ActivityIndicator color={colors.raspberry} />
+        {placeNotFound ? (
+          <Text style={styles.empty}>Couldn&apos;t find this café.</Text>
+        ) : (
+          <ActivityIndicator color={colors.raspberry} />
+        )}
       </ScreenContainer>
     );
   }
@@ -197,5 +205,12 @@ const styles = StyleSheet.create({
     borderTopColor: colors.creamDeep,
     borderStyle: 'dashed',
     marginVertical: spacing.xl,
+  },
+  empty: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.base,
+    color: colors.inkSoft,
+    marginTop: spacing.xl,
+    textAlign: 'center',
   },
 });
