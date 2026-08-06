@@ -40,14 +40,17 @@ export default function ManagePlaceScreen() {
   const [savingTagline, setSavingTagline] = useState(false);
   const [taglineSaved, setTaglineSaved] = useState(false);
 
+  // Re-fetch on focus (e.g. returning here after editing elsewhere) —
+  // `loading` only gates the very first load, so later focuses refresh in
+  // the background without re-showing the spinner, same convention as the
+  // Home tab (app/(tabs)/index.tsx).
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
-      setPlace(null);
-      setPlaceNotFound(false);
       fetchPlace(id)
         .then((data) => {
           setPlace(data);
+          setPlaceNotFound(false);
           setStatus(data.status);
           setReopenDate(data.reopen_date ?? '');
           setTagline(data.tagline ?? '');
