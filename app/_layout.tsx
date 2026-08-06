@@ -38,6 +38,7 @@ function RootNavigator() {
         <Stack.Screen name="events" options={pushedScreenOptions} />
         <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
         <Stack.Screen name="owner/index" options={pushedScreenOptions} />
+        <Stack.Screen name="owner/place/[id]" options={pushedScreenOptions} />
       </Stack.Protected>
 
       <Stack.Protected guard={isLoggedIn && needsOnboarding}>
