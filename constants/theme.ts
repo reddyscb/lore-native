@@ -1,23 +1,23 @@
 /**
  * lore. design tokens — ported from the web app's CSS custom properties.
  *
- * These hex values are best-effort placeholders based on the named palette
- * (cream / raspberry / mustard) and the variable names actually seen in the
- * web codebase (--ink, --ink-soft, --paper, --teal). Swap these for the exact
- * values from the web app's globals.css if pixel-perfect match matters —
- * everything in the app reads from this one file, so it's a single edit.
+ * These are the exact values from the web app's `app/globals.css` `:root`
+ * block, not approximations. If the web app's palette changes, re-read that
+ * file and update here — everything in this app reads from this one module.
  */
 
 export const colors = {
-  cream: '#F6F1E4', // app background
+  cream: '#F6F1E2', // app background
+  creamDeep: '#EEE6D2', // recessed surface (uncollected stamps, wells)
   paper: '#FFFCF5', // card / surface, lighter than cream
-  ink: '#1F1B16', // primary text
-  inkSoft: '#6B6255', // secondary / muted text
-  raspberry: '#B23A52', // primary accent, CTAs
-  raspberryDark: '#8E2C40', // pressed state
-  mustard: '#E3A93B', // secondary accent
-  teal: '#2F6F6B', // tertiary accent (avatar badges, etc.)
-  border: '#E4DBC8', // hairline borders on cream/paper
+  ink: '#18140E', // primary text, and every border
+  inkSoft: '#3A3327', // secondary / muted text
+  raspberry: '#E43B5C', // primary accent, CTAs
+  mustard: '#F0AE1E', // secondary accent, selected states
+  teal: '#2E6659', // tertiary accent (confirmations, badges)
+  // No web equivalent — used by StatusBadge/Chip hairlines where the
+  // 3px ink border would be too heavy.
+  border: '#E4DBC8',
   danger: '#B23A3A',
 } as const;
 
@@ -30,11 +30,17 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+/**
+ * The web app's `--line: 3px` — every card, button and input is outlined in
+ * a heavy ink stroke. This is the load-bearing detail of the pixel-art look.
+ */
+export const borderWidth = 3;
+
 export const radii = {
-  sm: 8,
-  md: 12,
-  lg: 18,
-  pill: 999,
+  field: 9, // .field input
+  button: 10, // .btn
+  card: 14, // .card
+  pill: 999, // .chip
 } as const;
 
 export const fontFamily = {
@@ -42,7 +48,7 @@ export const fontFamily = {
   displayItalic: 'Fraunces_500Medium_Italic',
   body: 'Inter_400Regular',
   bodyMedium: 'Inter_600SemiBold',
-  mono: 'SpaceMono_400Regular', // stamps, timestamps, ticket codes
+  mono: 'SpaceMono_400Regular', // eyebrows, field labels, timestamps, stamps
 } as const;
 
 export const fontSize = {
@@ -55,11 +61,18 @@ export const fontSize = {
   xxl: 30,
 } as const;
 
-// Shared shadow for pixel-art "raised card" feel (used sparingly)
-export const cardShadow = {
-  shadowColor: colors.ink,
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.08,
-  shadowRadius: 0,
-  elevation: 2,
-} as const;
+/**
+ * React Native equivalent of the web's `box-shadow: Npx Npx 0 var(--ink)` —
+ * a hard, un-blurred offset block rather than a soft drop shadow. Opacity is
+ * 1 and radius is 0 on purpose; anything softer reads as Material, not as
+ * the neo-brutalist look the web app uses.
+ */
+export function hardShadow(offset: number) {
+  return {
+    shadowColor: colors.ink,
+    shadowOffset: { width: offset, height: offset },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: offset, // Android fallback — no hard-shadow equivalent there
+  } as const;
+}

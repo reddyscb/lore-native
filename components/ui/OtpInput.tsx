@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     height: BOX_SIZE,
     borderWidth: 2,
     borderColor: colors.ink,
-    borderRadius: radii.sm,
+    borderRadius: radii.field,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.paper,

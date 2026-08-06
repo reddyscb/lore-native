@@ -1,7 +1,22 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { colors, fontFamily, fontSize, radii, spacing } from '@/constants/theme';
+import {
+  borderWidth,
+  colors,
+  fontFamily,
+  fontSize,
+  hardShadow,
+  radii,
+  spacing,
+} from '@/constants/theme';
 
-type Variant = 'primary' | 'ghost' | 'dark';
+/**
+ * Mirrors the web app's `.btn` family:
+ *   primary   -> .btn.btn-primary  (raspberry fill)
+ *   dark      -> .btn.btn-dark     (ink fill)
+ *   secondary -> .btn              (paper fill — the unmodified base button)
+ *   ghost     -> .btn-ghost        (borderless underlined link)
+ */
+type Variant = 'primary' | 'dark' | 'secondary' | 'ghost';
 
 type Props = {
   label: string;
@@ -9,26 +24,34 @@ type Props = {
   variant?: Variant;
   loading?: boolean;
   disabled?: boolean;
+  /** Shrink-wrap to the label instead of filling the row (web's `width: auto`). */
+  inline?: boolean;
 };
 
-export function Button({ label, onPress, variant = 'primary', loading, disabled }: Props) {
+export function Button({ label, onPress, variant = 'primary', loading, disabled, inline }: Props) {
   const isDisabled = disabled || loading;
+  const isGhost = variant === 'ghost';
 
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      accessibilityRole="button"
       style={({ pressed }) => [
-        styles.base,
-        variantStyles[variant],
-        pressed && !isDisabled && styles.pressed,
+        isGhost ? styles.ghostBase : styles.base,
+        !isGhost && variantStyles[variant],
+        inline && styles.inline,
+        // The web button physically presses down into its own shadow.
+        pressed && !isDisabled && (isGhost ? styles.ghostPressed : styles.pressed),
         isDisabled && styles.disabled,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'ghost' ? colors.ink : colors.paper} />
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'dark' ? colors.paper : colors.ink}
+        />
       ) : (
-        <Text style={[styles.label, variant === 'ghost' && styles.labelGhost]}>{label}</Text>
+        <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
       )}
     </Pressable>
   );
@@ -36,17 +59,28 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled 
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.button,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth,
     borderColor: colors.ink,
+    ...hardShadow(4),
   },
   pressed: {
-    opacity: 0.85,
-    transform: [{ translateY: 1 }],
+    transform: [{ translateX: 3 }, { translateY: 3 }],
+    ...hardShadow(1),
+  },
+  ghostBase: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+  },
+  ghostPressed: {
+    opacity: 0.6,
+  },
+  inline: {
+    alignSelf: 'flex-start',
   },
   disabled: {
     opacity: 0.5,
@@ -54,24 +88,23 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.base,
-    color: colors.paper,
-  },
-  labelGhost: {
-    color: colors.ink,
   },
 });
 
 const variantStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.raspberry,
-    borderColor: colors.raspberry,
-  },
-  dark: {
-    backgroundColor: colors.ink,
-    borderColor: colors.ink,
-  },
+  primary: { backgroundColor: colors.raspberry },
+  dark: { backgroundColor: colors.ink },
+  secondary: { backgroundColor: colors.paper },
+  ghost: {},
+});
+
+const labelStyles = StyleSheet.create({
+  primary: { color: colors.paper },
+  dark: { color: colors.cream },
+  secondary: { color: colors.ink },
   ghost: {
-    backgroundColor: 'transparent',
-    borderColor: colors.ink,
+    color: colors.inkSoft,
+    fontSize: fontSize.sm,
+    textDecorationLine: 'underline',
   },
 });
