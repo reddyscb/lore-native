@@ -36,10 +36,15 @@ Do not duplicate schema or RLS work here; if something needs a schema
 change, it should usually happen once, in the web repo's migrations, and
 just be consumed here.
 
-**Same design language.** Cream / raspberry / mustard pixel-art system,
-Fraunces (display) + Inter (body) + Space Mono (mono/stamps) typefaces. See
-`constants/theme.ts` — every color and font in the app should come from
-that one file, nothing hardcoded inline.
+**Same design language.** Cream / raspberry / mustard neo-brutalist system —
+3px ink borders and hard, un-blurred offset shadows (`hardShadow()` in
+`constants/theme.ts`), not soft Material-style ones — plus Fraunces
+(display) + Inter (body) + Space Mono (mono/stamps, and the `Eyebrow` kicker
+component used to open most screens) typefaces. `constants/theme.ts` holds
+the exact color values read from the web app's `app/globals.css` (not
+approximations — see "Reference: the web app repo" below) — every color,
+font, and shadow in the app should come from that one file, nothing
+hardcoded inline.
 
 **Same auth providers.** Google OAuth and Phone OTP (Twilio Verify) are
 already configured on the Supabase project's Auth settings. This app reuses
@@ -141,35 +146,82 @@ rewrite actually needs:
   ("with X, Y"). New shared component: `components/ui/PlaceListItem.tsx`.
   Collections, owner dashboard, events/tickets, passport/diary remain
   later phases.
+- **Phase 4 — done, verified end-to-end (including real writes to
+  Supabase).** Passport tab (`app/(tabs)/passport.tsx`) is a real two-column
+  stamp grid — a place is "stamped" once the signed-in user has any
+  `diary_entries` row for it. Check-in (`app/checkin/[placeId].tsx`, linked
+  from a new "Been here?" button on café detail) writes that diary entry and
+  routes back to Passport with a "Stamp collected" toast. Diary
+  (`app/diary.tsx`) is the private visit log behind it. Collections
+  (`app/collections/index.tsx` + `app/collections/[id].tsx`) are a real
+  save/organize flow — café detail grew a "Save to a collection" row whose
+  upsert keys off the real `(owner_id, name)` unique constraint, so saving
+  to an existing collection name adds to it rather than duplicating.
+  Events (`app/events.tsx`) lists upcoming events and reserves tickets
+  through the `reserve_tickets` RPC (unchanged from web — it's the atomic,
+  race-safe capacity check; see its doc comment on `reserveTickets` in
+  `lib/queries.ts` for the one known gap, shared with web, around a
+  post-RPC insert failure). Entry points mirror where the web app puts them
+  (Profile tab buttons, Home feed quick links, café detail). This phase also
+  did a design-parity pass — see "Same design language" above — that
+  touched every existing screen, and added `ScreenContainer`'s `hasHeader`
+  prop (pushed screens under a nav header pass `hasHeader` so the top safe-
+  area inset isn't double-applied).
 - **Later:** push notifications, photo/video upload (Supabase Storage —
-  not built on web either yet), a dedicated polish pass (list
-  virtualization, image caching, transition tuning), then store
+  not built on web either yet), owner dashboard, a dedicated polish pass
+  (list virtualization, image caching, transition tuning), then store
   submission prep.
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
 
+## Reference: the web app repo
+
+`github.com/reddyscb/lore-app` is cloned read-only at
+`../lore-app-reference` (sibling to this repo, not inside it). It's the
+fastest way to check exact copy, field names/shapes, and screen structure
+for any feature that already exists on web before building the native
+version — used for Phase 4 (collections/diary/events) and worth reusing for
+owner dashboard later. It's a snapshot, not a live mirror — re-clone or
+`git pull` it if it's been a while and something looks off.
+
 ## Regression testing
 
-`maestro/*.yaml` holds a Maestro E2E suite covering the flows built so
-far (Profile smoke test, Home feed + café detail, Explore search/filter,
-the compose-and-tag write path, and the reply composer). Run it with
-`npm run test:e2e` — this runs each flow one at a time via
-`scripts/test-e2e.sh` against a booted Simulator with the app already
+`maestro/*.yaml` holds a Maestro E2E suite covering the flows built so far
+(Profile smoke test, Home feed + café detail, Explore search/filter, the
+compose-and-tag write path, the reply composer, and Phase 4's
+passport/diary, check-in, collections, and events/ticket-reservation
+flows). Run it with `npm run test:e2e` — this runs each flow one at a time
+via `scripts/test-e2e.sh` against a booted Simulator with the app already
 installed (running the whole `maestro/` folder at once via
 `maestro test maestro/` showed scheduling flakiness; one at a time is
 reliable).
+
+Both the Maestro CLI and `idb` (see the iOS Simulator workflow note below)
+install to `~/.maestro/bin` and `~/.local/bin` respectively — neither is
+necessarily on `PATH` in a fresh shell, so `export PATH="$HOME/.maestro/bin:$HOME/.local/bin:$PATH"`
+before using them if `command not found`.
 
 **Requirements before running:** Maestro CLI installed
 (`curl -Ls "https://get.maestro.mobile.dev" | bash`), a booted Simulator
 with a **signed-in session already present** (auth can't be scripted —
 flows assume you're logged in and land on the tab bar), and the seed
 data the flows reference still existing (places "The Copper Pot" and
-"Ruskin & Rye", a profile named "sree" for the tagging flow). Each write
-flow (`phase3-compose-and-tag`, `phase3-reply`) inserts new rows into the
-live dev Supabase project every run — there's no separate test project to
-reset between runs, so don't be surprised by "Maestro regression dish"
-drops accumulating.
+"Ruskin & Rye", a profile named "sree" for the tagging flow). Reinstalling
+the app (e.g. `npx expo run:ios` after a native-level change) wipes the
+signed-in session — SecureStore's Keychain item is tied to the install —
+so sign in again before running the suite if you've just done that.
+
+Most write flows (`phase3-compose-and-tag`, `phase3-reply`,
+`phase4-checkin`, `phase4-events`) insert new rows into the live dev
+Supabase project every run — there's no separate test project to reset
+between runs, so don't be surprised by rows accumulating (e.g. "Maestro
+regression dish" drops). `phase4-collections` is the exception: its upsert
+keys off the real `(owner_id, name)` constraint, so repeat runs are a
+no-op past the first. `phase4-events` reserves 1 ticket per run against a
+real seed event — `tickets_total` was padded with headroom specifically so
+the suite doesn't eventually sell the event out and start failing; if it
+ever does, bump `tickets_total` again (dev data, not schema).
 
 **Gotchas hit building this suite, worth knowing before writing more
 flows:**
@@ -191,6 +243,24 @@ flows:**
   `keyboardShouldPersistTaps="handled"` to the relevant ScrollView/FlatList
   instead (see "Bugs found" below) so taps work regardless of keyboard
   state, same as real users experience.
+- **Leaving the keyboard open before a tap on a distant element is
+  unreliable, and fails silently rather than erroring** — found building
+  the Phase 4 flows. With the keyboard still up (from an earlier
+  `inputText`/`eraseText`), a subsequent `tapOn` by accessibility text can
+  miscompute the hit point on this iOS Simulator/XCTest combination and
+  land on the still-focused field or even a keyboard key instead of the
+  intended target — e.g. `tapOn: ".*The Copper Pot.*"` landed back on the
+  search field and typed into it; `tapOn: "Save to my diary"` landed on the
+  keyboard's "y" key and appended a stray character to the field above.
+  Both looked like `assertVisible` failures with no indication the tap
+  itself misfired — the debug screenshot was the only way to see it. Fix:
+  dismiss the keyboard before that tap. For a single-line field, `pressKey:
+  Enter` works (RN's default `blurOnSubmit`). For a multiline field (Enter
+  inserts a newline instead), tap a plain, non-interactive `Text` on screen
+  instead — `keyboardShouldPersistTaps="handled"` only protects touches on
+  *interactive* elements from dismissing the keyboard, so a tap on inert
+  text still blurs and dismisses normally. `hideKeyboard` (above) does not
+  fix this — it fails outright when tried here.
 
 **Real bugs this suite caught, not just test flakiness:** the Explore
 tab, Post tab's place picker, and café detail's reply box were all
@@ -204,7 +274,9 @@ Fixed in all three screens.
 
 - Import paths use the `@/` alias (`@/lib/supabase`, `@/constants/theme`).
 - Every screen wraps in `<ScreenContainer>` for consistent background/safe
-  area handling.
+  area handling. Screens pushed under a navigation header (anything besides
+  the five tabs) pass `hasHeader` so the top safe-area inset isn't
+  double-applied on top of the header's own.
 - All colors/fonts/spacing come from `constants/theme.ts` — no inline hex
   values or magic numbers in component styles.
 - Reusable UI lives in `components/ui/`; screen-specific one-offs stay in

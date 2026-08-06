@@ -1,0 +1,44 @@
+appId: com.reddyscb.lore
+---
+# Covers the collections write path: café detail -> save to a new named
+# collection -> the saved chip appears on the café page -> the collection
+# shows up on the Collections list -> opening it lists the saved place.
+#
+# Assumes seed data: a place named "Ruskin & Rye". Assumes a signed-in
+# session already exists in the simulator.
+#
+# Note: tab bar items and place-card headers expose composite
+# accessibility labels, so selectors below use .*wildcards.* rather than
+# exact text — Maestro's text matcher is anchored, not substring.
+#
+# Note: each run creates a new collection (or adds to one of the same
+# name) in the live dev Supabase project — there's no separate test
+# project to reset between runs (same tradeoff as the other Phase 3/4
+# write flows).
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*Ruskin & Rye.*"
+- extendedWaitUntil:
+    visible: "Save to a collection (e.g. Date spots)"
+    timeout: 10000
+
+- tapOn: "Save to a collection (e.g. Date spots)"
+- inputText: "Maestro regression collection"
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible: ".*Maestro regression collection.*"
+    timeout: 8000
+
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 8000
+- tapOn: ".*Collections.*"
+- extendedWaitUntil:
+    visible: "Saved lore, organized"
+    timeout: 10000
+- tapOn: ".*Maestro regression collection.*"
+- assertVisible: ".*Ruskin & Rye.*"

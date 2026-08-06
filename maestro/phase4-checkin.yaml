@@ -1,0 +1,45 @@
+appId: com.reddyscb.lore
+---
+# Covers the check-in write path: café detail -> "Been here?" -> save a
+# diary entry -> lands back on Passport with the "Stamp collected" banner
+# and that place's stamp showing as collected.
+#
+# Assumes seed data: a place named "The Copper Pot". Assumes a signed-in
+# session already exists in the simulator.
+#
+# Note: tab bar items and place-card headers expose composite
+# accessibility labels, so selectors below use .*wildcards.* rather than
+# exact text — Maestro's text matcher is anchored, not substring.
+#
+# Note: each run inserts a new diary_entries row into the live dev
+# Supabase project — there's no separate test project to reset between
+# runs (same tradeoff as the other Phase 3/4 write flows).
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*The Copper Pot.*"
+- extendedWaitUntil:
+    visible: "Been here?"
+    timeout: 10000
+- tapOn: "Been here?"
+- assertVisible: ".*Remember The Copper Pot.*"
+
+- tapOn: "What made it worth remembering…"
+- inputText: "Maestro regression checkin"
+# Dismiss the keyboard before the Save tap: with it still up, Maestro's
+# tap-by-accessibility-text on this iOS Simulator/XCTest combination
+# miscomputes the hit point and lands on the keyboard itself instead of
+# the button below it. The field is multiline so pressKey Enter would
+# insert a newline instead of blurring — tap a non-interactive Text
+# instead (keyboardShouldPersistTaps="handled" only protects touches on
+# interactive elements from dismissing the keyboard, so this still blurs
+# normally).
+- tapOn: ".*Remember The Copper Pot.*"
+- tapOn: "Save to my diary"
+
+- extendedWaitUntil:
+    visible: ".*Stamp collected.*"
+    timeout: 10000
+- assertVisible: ".*collected ✦.*"

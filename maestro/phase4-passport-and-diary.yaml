@@ -1,0 +1,24 @@
+appId: com.reddyscb.lore
+---
+# Read-only smoke test for the Passport tab and the diary link off it.
+# Assumes a signed-in session already exists in the simulator.
+#
+# Note: tab bar items expose composite accessibility labels, so the tab
+# selector below uses .*wildcards.* rather than exact text — Maestro's text
+# matcher is anchored, not substring.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*Passport.*"
+- extendedWaitUntil:
+    visible: "Your city, one stamp at a time"
+    timeout: 10000
+- assertVisible: ".*view your private diary.*"
+- tapOn: ".*view your private diary.*"
+- assertVisible: "Your visit diary"
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: "Your city, one stamp at a time"
+    timeout: 8000

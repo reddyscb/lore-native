@@ -1,0 +1,38 @@
+appId: com.reddyscb.lore
+---
+# Covers the ticket reservation write path, through the atomic
+# reserve_tickets RPC: Events screen -> drop the ticket count to the
+# minimum -> Reserve -> "Reserved" banner -> ticket appears under "Your
+# tickets".
+#
+# Assumes a signed-in session already exists in the simulator, and at
+# least one bookable event exists with capacity left.
+#
+# Note: each run reserves 1 ticket against a live seed event in the dev
+# Supabase project — tickets_total was padded with headroom specifically
+# so this suite doesn't eventually sell the event out and start failing
+# (unlike the other Phase 3/4 write flows, tickets are capacity-bound, not
+# an unbounded table).
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*Events.*"
+- extendedWaitUntil:
+    visible: "What's on this week"
+    timeout: 10000
+
+# Default reservation count is 2 — drop it to 1 to minimise how fast this
+# consumes the seed event's capacity on every regression run.
+- tapOn:
+    text: "One fewer ticket"
+    index: 0
+- tapOn:
+    text: "Reserve"
+    index: 0
+
+- extendedWaitUntil:
+    visible: "Reserved ✓"
+    timeout: 10000
+- assertVisible: ".*Your tickets.*"

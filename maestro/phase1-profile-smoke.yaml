@@ -13,6 +13,11 @@ appId: com.reddyscb.lore
 - extendedWaitUntil:
     visible: "Home"
     timeout: 15000
+# The tap right after launch can race Metro's reconnect even once "Home"
+# is visible — wrap it in extendedWaitUntil too rather than a bare tapOn.
+- extendedWaitUntil:
+    visible: ".*Profile.*"
+    timeout: 8000
 - tapOn: ".*Profile.*"
 - assertVisible: "Display name"
 - assertVisible: "Role"

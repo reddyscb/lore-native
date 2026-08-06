@@ -32,10 +32,16 @@ appId: com.reddyscb.lore
 - assertNotVisible: ".*The Copper Pot.*"
 - tapOn: "Jubilee Hills" # deselect
 
-# Tapping a result opens its detail page
+# Tapping a result opens its detail page. Dismiss the keyboard first: with
+# it still up (search field focused since erasing text doesn't blur it),
+# Maestro's tap-by-accessibility-text on this iOS Simulator/XCTest
+# combination miscomputes the hit point and lands back on the search field
+# instead of the card below it — pressKey Enter blurs the field via RN's
+# default blurOnSubmit on a single-line TextInput.
 - extendedWaitUntil:
     visible: ".*The Copper Pot.*"
     timeout: 8000
+- pressKey: Enter
 - tapOn: ".*The Copper Pot.*"
 - assertVisible: "Drop lore about this place"
 - tapOn: "Back"
