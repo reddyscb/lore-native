@@ -517,11 +517,9 @@ Replace with:
         <Stack.Screen name="diary" options={pushedScreenOptions} />
         <Stack.Screen name="events" options={pushedScreenOptions} />
         <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
-        <Stack.Screen name="owner/index" options={pushedScreenOptions} />
-        <Stack.Screen name="owner/place/[id]" options={pushedScreenOptions} />
 ```
 
-(All three owner routes are registered now, even though `owner/index` and `owner/place/[id]` don't have files yet until Tasks 5–8 — Expo Router only needs the file to exist by the time that screen is actually navigated to, and registering all three together avoids a second edit to this shared file later.)
+(Only `owner/claim` is registered here — its file exists as of this task. `owner/index` and `owner/place/[id]` get their own `Stack.Screen` line added in Tasks 5 and 6 respectively, alongside the file that makes each one real, rather than forward-declaring a route to a file that doesn't exist yet.)
 
 - [ ] **Step 3: Add the Profile tab entry point**
 
@@ -589,6 +587,7 @@ EOF
 
 **Files:**
 - Create: `app/owner/index.tsx`
+- Modify: `app/_layout.tsx` (register the route)
 
 **Interfaces:**
 - Consumes: `fetchOwnedPlaces` (Task 2); `Place`, `Dish` types (Task 2); `Card`, `Button`, `StatusBadge`, `PageHeader`, `ScreenContainer` (existing); `useAuthContext`.
@@ -700,21 +699,34 @@ const styles = StyleSheet.create({
 });
 ```
 
-(No new `Stack.Screen` registration needed — Task 4 already registered `owner/index`.)
+- [ ] **Step 2: Register the route**
 
-- [ ] **Step 2: Typecheck and lint**
+In `app/_layout.tsx`, find:
+
+```tsx
+        <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
+```
+
+Replace with:
+
+```tsx
+        <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
+        <Stack.Screen name="owner/index" options={pushedScreenOptions} />
+```
+
+- [ ] **Step 3: Typecheck and lint**
 
 Run: `npx tsc --noEmit && npx eslint . --ext .ts,.tsx`
 Expected: no errors.
 
-- [ ] **Step 3: Manual verification in Simulator**
+- [ ] **Step 4: Manual verification in Simulator**
 
 Continuing from the account that claimed a place in Task 4: Profile tab → the button now reads "Owner dashboard" → tap it → confirm the claimed place renders as a card with its status badge and a "Manage" button → tap "Manage" (will still error, since `app/owner/place/[id].tsx` doesn't exist until Task 6 — expected at this point) → tap "+ claim another place" → confirm it returns to the claim screen.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add app/owner/index.tsx
+git add app/owner/index.tsx app/_layout.tsx
 git commit -m "Add owner dashboard screen listing claimed places"
 ```
 
@@ -724,6 +736,7 @@ git commit -m "Add owner dashboard screen listing claimed places"
 
 **Files:**
 - Create: `app/owner/place/[id].tsx`
+- Modify: `app/_layout.tsx` (register the route)
 
 **Interfaces:**
 - Consumes: `fetchPlace` (existing, `lib/queries.ts:95-100`), `updatePlaceStatus`, `updatePlaceTagline`, `Place` type (Task 2); `Chip`, `TextField`, `Button`, `PageHeader`, `ScreenContainer` (existing).
@@ -937,21 +950,36 @@ const styles = StyleSheet.create({
 });
 ```
 
-(No new `Stack.Screen` registration needed — Task 4 already registered `owner/place/[id]`.)
+- [ ] **Step 2: Register the route**
 
-- [ ] **Step 2: Typecheck and lint**
+In `app/_layout.tsx`, find:
+
+```tsx
+        <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
+        <Stack.Screen name="owner/index" options={pushedScreenOptions} />
+```
+
+Replace with:
+
+```tsx
+        <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
+        <Stack.Screen name="owner/index" options={pushedScreenOptions} />
+        <Stack.Screen name="owner/place/[id]" options={pushedScreenOptions} />
+```
+
+- [ ] **Step 3: Typecheck and lint**
 
 Run: `npx tsc --noEmit && npx eslint . --ext .ts,.tsx`
 Expected: no errors.
 
-- [ ] **Step 3: Manual verification in Simulator**
+- [ ] **Step 4: Manual verification in Simulator**
 
 From the owner dashboard, tap "Manage" on the claimed place → confirm the screen loads with the place's current status selected and tagline (if any) prefilled → tap "Temporarily closed" → confirm the reopen-date field appears → fill it in and tap "Update status" → confirm the button briefly shows "Saving…" then "Status updated ✓" → back out and back in (or pull the dashboard's list again) to confirm the status persisted. Repeat for the tagline field.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add "app/owner/place/[id].tsx"
+git add "app/owner/place/[id].tsx" app/_layout.tsx
 git commit -m "Add per-place manage screen: status and tagline editing"
 ```
 
@@ -1733,4 +1761,5 @@ The `phase-wrapup` skill's own checklist ends in a handback, not a commit — no
 - **Type consistency checked:** `Dish` (Task 2) → consumed identically in Tasks 5, 7, 8, 9. `NewDishInput`/`DishUpdateInput` (Task 2) → `addDish`/`updateDish` call sites in Tasks 7–8 match their shapes exactly. `PlaceSummary` (existing, unmodified) → Task 4's `fetchUnclaimedPlaces` return type matches `PlaceListItem`'s existing prop type with no cast needed.
 - **No placeholders:** every step has literal code or an exact SQL/CLI command. The reopen-date field's keyboard-dismiss step initially had no concrete answer — resolved by checking the field is single-line (no `multiline` prop), so CLAUDE.md's documented `pressKey: Enter` fix applies directly, avoiding a vague "figure it out from a screenshot" step.
 - **Caught during self-review by checking real files instead of trusting memory:** the Maestro flow's `appId` was initially guessed as `com.reddyworks.lorenative` — the actual value, confirmed from `app.json` and every existing `maestro/*.yaml`, is `com.reddyscb.lore`. Also confirmed `scripts/test-e2e.sh` globs `maestro/*.yaml` rather than enumerating flows, so Task 10 doesn't touch it. Also flagged and documented the Expo Router typed-routes staleness gotcha (`.expo/types/router.d.ts` only regenerates while `expo start` is running) as a Global Constraint, since Tasks 4–6 reference routes that don't exist as files until later tasks and a stale type file would otherwise look like a real type error.
+- **Caught during the pre-dispatch conflict scan (subagent-driven-development's required pass before Task 1):** the original draft had Task 4 forward-declaring all three `owner/*` `Stack.Screen` entries in `app/_layout.tsx` at once, even though `owner/index` and `owner/place/[id]` don't have files until Tasks 5–6. Since `Stack.Screen`'s `name` prop is a route reference (and this project's typed routes make route-name mistakes a build-time concern generally), forward-declaring a route to a nonexistent file was an unverified assumption not worth carrying into execution. Fixed by moving each `Stack.Screen` registration into the same task that creates its file — Task 4 now registers only `owner/claim`, Task 5 adds `owner/index` (and `app/_layout.tsx` to its Files/commit list), Task 6 adds `owner/place/[id]` (same). Every task's route registration now lands in the same commit as the file it points to.
 - **Non-idempotent flow, documented not hidden:** claiming has no reverse operation (matches the design spec's explicit YAGNI decision), so `phase7-owner-dashboard.yaml` can only run clean-to-clean. Rather than build untested conditional Maestro logic to paper over that, the flow's header comment documents the exact SQL reset needed before a re-run — consistent with how CLAUDE.md already documents non-idempotency tradeoffs for the Phase 3/4 write flows.
