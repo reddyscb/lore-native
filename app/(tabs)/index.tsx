@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text } from 'react-native';
+import { useRouter } from 'expo-router';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { DropCard } from '@/components/ui/DropCard';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { fetchDropFeed, type Drop } from '@/lib/queries';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,7 +52,19 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <DropCard drop={item} place={item.places ? { id: item.place_id, ...item.places } : undefined} />
         )}
-        ListHeaderComponent={<Text style={styles.title}>Home</Text>}
+        ListHeaderComponent={
+          <View>
+            <Text style={styles.title}>Home</Text>
+            <View style={styles.quickLinks}>
+              <Pressable onPress={() => router.push('/collections')}>
+                <Text style={styles.quickLink}>Collections</Text>
+              </Pressable>
+              <Pressable onPress={() => router.push('/events')}>
+                <Text style={styles.quickLink}>Events</Text>
+              </Pressable>
+            </View>
+          </View>
+        }
         ListEmptyComponent={
           <Text style={styles.empty}>No drops yet — be the first to leave one.</Text>
         }
@@ -68,7 +90,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xxl,
     color: colors.ink,
     marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  quickLinks: {
+    flexDirection: 'row',
+    gap: spacing.lg,
     marginBottom: spacing.lg,
+  },
+  quickLink: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.raspberry,
+    textDecorationLine: 'underline',
   },
   empty: {
     fontFamily: fontFamily.body,

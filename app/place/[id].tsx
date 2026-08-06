@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
@@ -15,11 +23,15 @@ import {
   fetchPlace,
   fetchDishes,
   fetchPlaceDrops,
+  fetchCollectionsForPlace,
+  saveToCollection,
+  removeFromCollection,
   createReply,
   type Place,
   type Dish,
   type Drop,
   type DropReply,
+  type Collection,
 } from '@/lib/queries';
 
 const LORE_FIELDS: { key: keyof Place; label: string }[] = [
@@ -49,9 +61,16 @@ export default function PlaceDetailScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const [savedIn, setSavedIn] = useState<Collection[]>([]);
+
+  useEffect(() => {
+    if (!id || !authorId) return;
+    fetchCollectionsForPlace(authorId, id).then(setSavedIn);
+  }, [id, authorId]);
+
   if (loading) {
     return (
-      <ScreenContainer style={styles.centered}>
+      <ScreenContainer hasHeader style={styles.centered}>
         <ActivityIndicator color={colors.raspberry} />
       </ScreenContainer>
     );
@@ -59,14 +78,14 @@ export default function PlaceDetailScreen() {
 
   if (!place) {
     return (
-      <ScreenContainer style={styles.centered}>
+      <ScreenContainer hasHeader style={styles.centered}>
         <Text style={styles.empty}>Couldn&apos;t find this café.</Text>
       </ScreenContainer>
     );
   }
 
   return (
-    <ScreenContainer padded={false}>
+    <ScreenContainer hasHeader padded={false}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.name}>{place.name}</Text>
         <Text style={styles.meta}>
@@ -75,11 +94,29 @@ export default function PlaceDetailScreen() {
         {place.tagline && <Text style={styles.tagline}>{place.tagline}</Text>}
         <StatusBadge status={place.status} reopenDate={place.reopen_date} />
 
-        <Button
-          label="Drop lore about this place"
-          variant="ghost"
-          onPress={() => router.push({ pathname: '/(tabs)/post', params: { placeId: place.id } })}
-        />
+        <View style={styles.actionRow}>
+          <Button
+            label="Drop lore about this place"
+            variant="dark"
+            inline
+            onPress={() => router.push({ pathname: '/(tabs)/post', params: { placeId: place.id } })}
+          />
+          <Button
+            label="Been here?"
+            variant="secondary"
+            inline
+            onPress={() => router.push(`/checkin/${place.id}`)}
+          />
+        </View>
+
+        {authorId && (
+          <SaveToCollection
+            ownerId={authorId}
+            placeId={place.id}
+            savedIn={savedIn}
+            onChange={setSavedIn}
+          />
+        )}
 
         {LORE_FIELDS.some(({ key }) => place[key]) && (
           <Card style={styles.section}>
@@ -141,6 +178,89 @@ export default function PlaceDetailScreen() {
   );
 }
 
+/**
+ * "Save to a collection" — typing a name that already exists adds to that
+ * list rather than creating a duplicate (the upsert keys off the
+ * `(owner_id, name)` unique constraint). Collections this place is already
+ * in show as selected chips; tapping one removes the place from it.
+ */
+function SaveToCollection({
+  ownerId,
+  placeId,
+  savedIn,
+  onChange,
+}: {
+  ownerId: string;
+  placeId: string;
+  savedIn: Collection[];
+  onChange: (collections: Collection[]) => void;
+}) {
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function refresh() {
+    onChange(await fetchCollectionsForPlace(ownerId, placeId));
+  }
+
+  async function onSave() {
+    if (!name.trim()) return;
+    setBusy(true);
+    try {
+      await saveToCollection(ownerId, placeId, name);
+      setName('');
+      await refresh();
+    } catch (error) {
+      Alert.alert('Could not save', error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRemove(collectionId: string) {
+    setBusy(true);
+    try {
+      await removeFromCollection(collectionId, placeId);
+      await refresh();
+    } catch (error) {
+      Alert.alert('Could not remove', error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={styles.saveSection}>
+      {savedIn.length > 0 && (
+        <View style={styles.chipRow}>
+          {savedIn.map((collection) => (
+            <Chip
+              key={collection.id}
+              label={`✓ ${collection.name} ✕`}
+              selected
+              onPress={() => onRemove(collection.id)}
+            />
+          ))}
+        </View>
+      )}
+      <View style={styles.saveRow}>
+        <TextField
+          placeholder="Save to a collection (e.g. Date spots)"
+          value={name}
+          onChangeText={setName}
+          containerStyle={styles.saveInput}
+        />
+        <Button
+          label="Save"
+          variant="dark"
+          inline
+          onPress={onSave}
+          disabled={!name.trim() || busy}
+        />
+      </View>
+    </View>
+  );
+}
+
 function ReplyComposer({
   dropId,
   authorId,
@@ -171,7 +291,8 @@ function ReplyComposer({
         placeholder="Reply…"
         value={body}
         onChangeText={setBody}
-        style={styles.replyInput}
+        containerStyle={styles.replyInput}
+        style={styles.replyInputText}
       />
       <Pressable onPress={onSubmit} disabled={submitting || !body.trim()}>
         <Text style={[styles.replySubmit, (submitting || !body.trim()) && styles.replySubmitDisabled]}>
@@ -259,6 +380,30 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     textAlign: 'center',
   },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  saveSection: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  saveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  saveInput: {
+    flex: 1,
+  },
   replyComposer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -269,6 +414,8 @@ const styles = StyleSheet.create({
   },
   replyInput: {
     flex: 1,
+  },
+  replyInputText: {
     paddingVertical: spacing.sm,
   },
   replySubmit: {

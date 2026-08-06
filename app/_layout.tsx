@@ -11,6 +11,16 @@ import { colors, fontFamily } from '@/constants/theme';
 //  1. logged out              -> (auth) welcome / phone / verify
 //  2. logged in, not onboarded -> onboarding (name + role, same as web Phase 1)
 //  3. logged in, onboarded     -> (tabs) the actual app
+// Shared header treatment for every pushed (non-tab) screen.
+const pushedScreenOptions = {
+  title: '',
+  headerBackTitle: 'Back',
+  headerStyle: { backgroundColor: colors.cream },
+  headerTintColor: colors.ink,
+  headerTitleStyle: { fontFamily: fontFamily.body },
+  headerShadowVisible: false,
+} as const;
+
 function RootNavigator() {
   const { isLoggedIn, needsOnboarding } = useAuthContext();
 
@@ -18,17 +28,12 @@ function RootNavigator() {
     <Stack>
       <Stack.Protected guard={isLoggedIn && !needsOnboarding}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="place/[id]"
-          options={{
-            title: '',
-            headerBackTitle: 'Back',
-            headerStyle: { backgroundColor: colors.cream },
-            headerTintColor: colors.ink,
-            headerTitleStyle: { fontFamily: fontFamily.body },
-            headerShadowVisible: false,
-          }}
-        />
+        <Stack.Screen name="place/[id]" options={pushedScreenOptions} />
+        <Stack.Screen name="checkin/[placeId]" options={pushedScreenOptions} />
+        <Stack.Screen name="collections/index" options={pushedScreenOptions} />
+        <Stack.Screen name="collections/[id]" options={pushedScreenOptions} />
+        <Stack.Screen name="diary" options={pushedScreenOptions} />
+        <Stack.Screen name="events" options={pushedScreenOptions} />
       </Stack.Protected>
 
       <Stack.Protected guard={isLoggedIn && needsOnboarding}>

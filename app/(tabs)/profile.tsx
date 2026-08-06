@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +8,7 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { profile, session } = useAuthContext();
 
   async function onSignOut() {
@@ -28,6 +30,17 @@ export default function ProfileScreen() {
         <Text style={[styles.label, styles.spaced]}>Signed in as</Text>
         <Text style={styles.valueSmall}>{session?.user?.email ?? session?.user?.phone}</Text>
       </Card>
+
+      <View style={styles.links}>
+        <Button
+          label="Collections"
+          variant="secondary"
+          inline
+          onPress={() => router.push('/collections')}
+        />
+        <Button label="Events" variant="secondary" inline onPress={() => router.push('/events')} />
+      </View>
+      <Button label="my diary" variant="ghost" onPress={() => router.push('/diary')} />
 
       <View style={styles.footer}>
         <Button label="Sign out" variant="ghost" onPress={onSignOut} />
@@ -64,6 +77,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     fontSize: fontSize.base,
     color: colors.ink,
+  },
+  links: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
   },
   footer: {
     marginTop: 'auto',
