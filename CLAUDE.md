@@ -129,9 +129,17 @@ rewrite actually needs:
   (`app/(tabs)/index.tsx`); café detail is a new route (`app/place/[id].tsx`)
   showing place info, the go-for/skip/secret lore fields, dishes, and drops
   (must-order/skip/vibe-check/etc.) with their replies shown read-only.
-  Data layer is `lib/queries.ts`. Still read-only — no drop posting or
-  reply composing yet. Drop posting + replies UI, collections, owner
-  dashboard, events/tickets, passport/diary, explore/search all remain
+  Data layer is `lib/queries.ts`.
+- **Phase 3 — done, verified end-to-end (including real writes to
+  Supabase).** The app is now writable. Explore tab (`app/(tabs)/explore.tsx`)
+  is a real search + area/price-filter browse view. Post tab
+  (`app/(tabs)/post.tsx`) is a two-step compose flow — pick a place (or
+  skip straight to the form via a `placeId` param, used by the new "Drop
+  lore about this place" button on the café detail page) — then fill in
+  the review fields, tag friends, and submit. Café detail page now has an
+  inline reply box under each drop. `DropCard` shows tagged friends
+  ("with X, Y"). New shared component: `components/ui/PlaceListItem.tsx`.
+  Collections, owner dashboard, events/tickets, passport/diary remain
   later phases.
 - **Later:** push notifications, photo/video upload (Supabase Storage —
   not built on web either yet), a dedicated polish pass (list
@@ -140,6 +148,57 @@ rewrite actually needs:
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
+
+## Regression testing
+
+`maestro/*.yaml` holds a Maestro E2E suite covering the flows built so
+far (Profile smoke test, Home feed + café detail, Explore search/filter,
+the compose-and-tag write path, and the reply composer). Run it with
+`npm run test:e2e` — this runs each flow one at a time via
+`scripts/test-e2e.sh` against a booted Simulator with the app already
+installed (running the whole `maestro/` folder at once via
+`maestro test maestro/` showed scheduling flakiness; one at a time is
+reliable).
+
+**Requirements before running:** Maestro CLI installed
+(`curl -Ls "https://get.maestro.mobile.dev" | bash`), a booted Simulator
+with a **signed-in session already present** (auth can't be scripted —
+flows assume you're logged in and land on the tab bar), and the seed
+data the flows reference still existing (places "The Copper Pot" and
+"Ruskin & Rye", a profile named "sree" for the tagging flow). Each write
+flow (`phase3-compose-and-tag`, `phase3-reply`) inserts new rows into the
+live dev Supabase project every run — there's no separate test project to
+reset between runs, so don't be surprised by "Maestro regression dish"
+drops accumulating.
+
+**Gotchas hit building this suite, worth knowing before writing more
+flows:**
+- Maestro's text selectors are anchored (exact match), not substring —
+  our tab bar items and place-card headers expose composite accessibility
+  labels (`"Profile, tab, 5 of 5"`, `"The Copper Pot, Gachibowli, Open"`),
+  so selectors need `.*wildcards.*`.
+- `launchApp` alone doesn't reliably cold-restart the JS state on this
+  Expo dev client — add `stopApp` before it, or a screen can retain stale
+  state (e.g. Post tab still showing a previously-selected place) from an
+  earlier flow.
+- Right after `launchApp`, the accessibility snapshot can race the dev
+  client's Metro reconnect — wrap the first interaction in
+  `extendedWaitUntil` with a generous timeout (15s) rather than a bare
+  `assertVisible`/`tapOn`.
+- Maestro's generic `back` command doesn't reliably trigger navigation on
+  the custom Stack header here — `tapOn: "Back"` (the actual button) works.
+- `hideKeyboard` is unreliable on iOS Simulator. Don't rely on it — add
+  `keyboardShouldPersistTaps="handled"` to the relevant ScrollView/FlatList
+  instead (see "Bugs found" below) so taps work regardless of keyboard
+  state, same as real users experience.
+
+**Real bugs this suite caught, not just test flakiness:** the Explore
+tab, Post tab's place picker, and café detail's reply box were all
+missing `keyboardShouldPersistTaps="handled"` on their scrollable
+container. Without it, the *first* tap on a result/button right after
+typing just dismisses the keyboard instead of registering — a real user
+tapping a search result immediately after typing would need to tap twice.
+Fixed in all three screens.
 
 ## Conventions
 

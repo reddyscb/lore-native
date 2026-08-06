@@ -1,0 +1,21 @@
+appId: com.reddyscb.lore
+---
+# Assumes a signed-in session already exists in the simulator (Google/OTP
+# auth can't be scripted). Confirms the auth-gated nav shell and the
+# Profile screen still render real session data. Does NOT sign out, so the
+# session stays valid for the next run.
+#
+# Note: tab bar items expose a composite accessibility label
+# ("Profile, tab, 5 of 5"), so selectors below use .*wildcards.* rather
+# than exact text — Maestro's text matcher is anchored, not substring.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*Profile.*"
+- assertVisible: "Display name"
+- assertVisible: "Role"
+- assertVisible: "Signed in as"
+- assertVisible: "Sign out"
+- tapOn: ".*Home.*"

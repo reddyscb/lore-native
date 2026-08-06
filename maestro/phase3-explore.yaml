@@ -1,0 +1,41 @@
+appId: com.reddyscb.lore
+---
+# Assumes seed data: places "The Copper Pot" (Gachibowli) and
+# "Ruskin & Rye" (Jubilee Hills). Assumes a signed-in session already
+# exists in the simulator.
+#
+# Note: tab bar items and place-card headers expose composite
+# accessibility labels, so selectors below use .*wildcards.* rather than
+# exact text — Maestro's text matcher is anchored, not substring.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- tapOn: ".*Explore.*"
+- assertVisible: "Search cafés by name"
+
+# Text search narrows results
+- tapOn: "Search cafés by name"
+- inputText: "Copper"
+- extendedWaitUntil:
+    visible: ".*The Copper Pot.*"
+    timeout: 8000
+- assertNotVisible: ".*Ruskin & Rye.*"
+- eraseText
+
+# Area chip narrows results
+- tapOn: "Jubilee Hills"
+- extendedWaitUntil:
+    visible: ".*Ruskin & Rye.*"
+    timeout: 8000
+- assertNotVisible: ".*The Copper Pot.*"
+- tapOn: "Jubilee Hills" # deselect
+
+# Tapping a result opens its detail page
+- extendedWaitUntil:
+    visible: ".*The Copper Pot.*"
+    timeout: 8000
+- tapOn: ".*The Copper Pot.*"
+- assertVisible: "Drop lore about this place"
+- tapOn: "Back"
