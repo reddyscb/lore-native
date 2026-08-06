@@ -574,12 +574,16 @@ export async function claimPlace(userId: string, placeId: string): Promise<void>
     .eq('id', userId);
   if (roleError) throw roleError;
 
-  const { error: claimError } = await supabase
+  const { data, error: claimError } = await supabase
     .from('places')
     .update({ owner_id: userId })
     .eq('id', placeId)
-    .is('owner_id', null);
+    .is('owner_id', null)
+    .select('id');
   if (claimError) throw claimError;
+  if (!data || data.length === 0) {
+    throw new Error('This place was just claimed by someone else');
+  }
 }
 
 export async function fetchOwnedPlaces(
