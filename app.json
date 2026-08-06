@@ -21,7 +21,10 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.reddyscb.lore"
+      "package": "com.reddyscb.lore",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -51,11 +54,19 @@
           "photosPermission": "lore. needs access to your photos so you can attach pictures and videos to your drops.",
           "cameraPermission": "lore. needs access to your camera so you can take a photo or video for your drop."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "850ef6c4-0358-44e9-9955-0279675169cc"
+      }
+    },
+    "owner": "reddyworks-team"
   }
 }

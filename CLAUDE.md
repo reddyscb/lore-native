@@ -196,8 +196,68 @@ rewrite actually needs:
   that's owner-dashboard scope, not this phase. Adding `expo-image-picker`
   needed an `app.json` plugin entry (photo library + camera permission
   strings) and thus a full native rebuild (`npx expo run:ios`).
-- **Later:** push notifications, owner dashboard, a dedicated polish pass
-  (list virtualization, image caching, transition tuning), then store
+- **Phase 6 — done, verified end-to-end (schema-level push delivery
+  proven via `net._http_response`; UI-level notification receipt
+  requires a physical device, see below).** Push notifications (replies,
+  tags, and 24-hour event reminders) plus an app-wide performance pass.
+  New table `push_tokens` (`user_id`, `token`, unique on both together),
+  RLS scoped to the owning user. `pg_net` (schema `extensions`, moved
+  there in a hardening follow-up migration after `get_advisors` flagged it
+  in `public`) and `pg_cron` extensions enabled. A `send_expo_push(user_id,
+  title, body, data)` SECURITY DEFINER helper (`search_path = ''`, every
+  reference schema-qualified — see Postgres security best practices)
+  fans out to every token row for that user via `net.http_post` against
+  `https://exp.host/--/api/v2/push/send`; pg_net queues the request and
+  fires it after the transaction commits, so it never blocks the
+  triggering write. `notify_drop_reply`/`notify_drop_tag` triggers on
+  `drop_replies`/`drop_tags` call it (both `revoke execute`d from
+  `anon`/`authenticated` in the hardening migration — SECURITY DEFINER
+  functions are PostgREST-exposed by default). A new `events.reminder_sent_at`
+  column plus `send_event_reminders()` (matches events whose
+  IST-timezone-converted start time falls in the next 24h and hasn't
+  fired yet, loops its ticket holders) is driven by a `pg_cron` job
+  running hourly. Client side: `hooks/use-push-notifications.ts` requests
+  permission and calls `getExpoPushTokenAsync` once per signed-in user
+  (guarded by a ref so it doesn't re-fire on every render), upserts the
+  token via `registerPushToken` in `lib/queries.ts`
+  (`onConflict: 'user_id,token', ignoreDuplicates: true`), and listens
+  for notification taps to deep-link into `/place/[id]`. Wired into
+  `app/_layout.tsx`'s `RootNavigator`, gated on logged-in-and-onboarded.
+  Needed an EAS project link (`npx eas-cli login`, then `eas init`) to
+  populate `app.json`'s `extra.eas.projectId` — required by
+  `getExpoPushTokenAsync`; project is owned by the `reddyworks-team` EAS
+  account. Adding `expo-notifications` needed an `app.json` plugin entry
+  and thus a full native rebuild (`npx expo run:ios`), same as any new
+  native module.
+  **iOS Simulator cannot obtain a real push token** ("no valid
+  aps-environment entitlement string found for application") — this is
+  an Apple platform limitation, not a bug; `getExpoPushTokenAsync` is
+  expected to reject every time in Simulator, caught and logged (not
+  surfaced to the user). Also, `expo-notifications` itself
+  `console.warn`s about this on every launch — worth knowing about even
+  beyond this app, since an uncaught `console.warn` this early surfaces
+  React Native's "Open debugger to view warnings" banner directly over
+  the tab bar for several seconds after every launch (see the Maestro
+  gotcha below); silenced via `LogBox.ignoreLogs(...)` in the hook, since
+  the underlying warning is expected noise on Simulator specifically.
+  Performance pass (the other half of this phase's ask — "no lag, once
+  you click something there should not be any delay"): Home
+  (`app/(tabs)/index.tsx`) switched from a mount-only `useEffect` to
+  `useFocusEffect`, so revisiting the tab re-fetches in the background
+  without re-showing the blocking spinner (`loading` only gates the very
+  first load, same pattern already used by Passport); Explore
+  (`app/(tabs)/explore.tsx`) now sets `loading` synchronously on
+  keystroke instead of waiting for the 300ms debounce to elapse, so
+  typing doesn't look like it's doing nothing; café detail
+  (`app/place/[id].tsx`) split its single gated `Promise.all` fetch into
+  three independent effects (place / dishes / drops) so the page renders
+  as soon as place info loads instead of blocking on dishes and drops
+  too; and `fetchDishes`, `fetchPlaceDrops`, `searchPlaces`,
+  `fetchDiaryEntries`, `fetchEvents` in `lib/queries.ts` all gained safety
+  `.limit()`s so none of them can degrade into an unbounded query as data
+  grows.
+- **Later:** owner dashboard, a dedicated polish pass (list
+  virtualization, image caching, transition tuning), then store
   submission prep.
 
 Android setup, testing, and Play Store submission are deliberately
@@ -219,8 +279,12 @@ owner dashboard later. It's a snapshot, not a live mirror — re-clone or
 (Profile smoke test, Home feed + café detail, Explore search/filter, the
 compose-and-tag write path, the reply composer, Phase 4's
 passport/diary, check-in, collections, and events/ticket-reservation
-flows, and Phase 5's media section/avatar affordance smoke test). Run it
-with `npm run test:e2e` — this runs each flow one at a time
+flows, and Phase 5's media section/avatar affordance smoke test). Phase 6
+added no new flow of its own — push notifications have no UI path
+Maestro can drive (permission dialogs are OS UI, and Simulator can't get
+a real token anyway), so that phase leans entirely on the existing suite
+staying green plus the schema-level `net._http_response` check described
+above. Run it with `npm run test:e2e` — this runs each flow one at a time
 via `scripts/test-e2e.sh` against a booted Simulator with the app already
 installed (running the whole `maestro/` folder at once via
 `maestro test maestro/` showed scheduling flakiness; one at a time is
@@ -299,6 +363,43 @@ flows:**
   `xcrun simctl addmedia <udid> <path>` — a few seconds of
   `xcrun simctl io <udid> recordVideo out.mov` makes a throwaway test video
   when nothing else is handy).
+- **An uncaught `console.warn` early in app startup can silently break
+  every tab-bar tap for several seconds after every launch** — found
+  diagnosing a Phase 6 suite run where `phase1-profile-smoke`,
+  `phase3-explore`, `phase4-passport-and-diary`, and `phase5-media` all
+  failed identically: `tapOn` on a tab bar item (`.*Explore.*`,
+  `.*Passport.*`, `.*Profile.*`, `.*Drop lore.*`) reported `COMPLETED`
+  but the app never navigated, even with `extendedWaitUntil` already
+  wrapping the tap. Root cause: `expo-notifications` itself calls
+  `console.warn` on every launch on Simulator ("obtaining a push token
+  may not work..."), which surfaces React Native's "Open debugger to
+  view warnings" banner — and that banner renders *directly over the tab
+  bar* and doesn't auto-dismiss. A tap landing there gets swallowed
+  regardless of whether it's delivered by Maestro, `idb`, or (per a
+  timed repro) a real touch — it's not Maestro-specific and it isn't
+  timing-sensitive in the way it first looks (a 7-second wait before the
+  tap didn't help; what actually clears it is any prior successful touch
+  or the banner's own dismissal, not elapsed time). Regular in-content
+  taps (place cards, links, buttons) were unaffected throughout, which is
+  the tell — a same-cause investigation should watch for "only the tab
+  bar breaks, everything else on the same screen is fine." Fixed via
+  `LogBox.ignoreLogs(...)` in `hooks/use-push-notifications.ts` (see
+  Phase 6 above); worth remembering for *any* future mount-time
+  `console.warn`, not just this one. Two unrelated flows were also
+  hardened while diagnosing this: `phase3-reply` and `phase4-collections`
+  had fixed, un-scrolled assumptions about where their target element
+  would be, which months of accumulated seed/test data had outgrown —
+  both now use `scrollUntilVisible` instead of a bare `tapOn`/scroll-then-assert.
+- **Don't seed an app screenshot as Simulator test media** — found while
+  cleaning up after the same investigation. A screenshot of the app's own
+  tab bar, seeded via `simctl addmedia` to manually verify Phase 5's
+  photo/video picker, got iOS Live Text-recognized once attached to a
+  drop; the OCR'd text (including "Explore", "Passport", etc.) was
+  exposed as that thumbnail's accessibility label, which briefly made
+  Maestro's `.*wildcard.*` tab-bar selectors match text baked into a feed
+  image instead of the real tab bar. Any photo/video with visible text
+  works as picker-verification media — just not one containing this
+  app's own UI chrome.
 
 **Real bugs this suite caught, not just test flakiness:** the Explore
 tab, Post tab's place picker, and café detail's reply box were all
@@ -306,7 +407,9 @@ missing `keyboardShouldPersistTaps="handled"` on their scrollable
 container. Without it, the *first* tap on a result/button right after
 typing just dismisses the keyboard instead of registering — a real user
 tapping a search result immediately after typing would need to tap twice.
-Fixed in all three screens.
+Fixed in all three screens. Phase 6 added one more: `expo-notifications`'s
+own startup warning was covering the tab bar for real users too, not
+just tests — see the LogBox gotcha above.
 
 ## Conventions
 

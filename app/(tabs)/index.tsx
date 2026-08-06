@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   FlatList,
@@ -25,9 +25,14 @@ export default function HomeScreen() {
     setDrops(data);
   }, []);
 
-  useEffect(() => {
-    load().finally(() => setLoading(false));
-  }, [load]);
+  // Re-read on focus (not just on mount) so a drop posted elsewhere shows up
+  // when you come back to Home — `loading` only ever gates the very first
+  // load, so later focuses refresh in the background without a spinner.
+  useFocusEffect(
+    useCallback(() => {
+      load().finally(() => setLoading(false));
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

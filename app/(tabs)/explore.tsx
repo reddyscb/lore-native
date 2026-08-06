@@ -34,6 +34,10 @@ export default function ExploreScreen() {
   }, [query, area, priceRange]);
 
   useEffect(() => {
+    // Show the spinner immediately on keystroke rather than waiting for the
+    // debounce to elapse — otherwise typing looks like it does nothing for
+    // the first 300ms.
+    setLoading(true);
     const timeout = setTimeout(runSearch, 300);
     return () => clearTimeout(timeout);
   }, [runSearch]);

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SplashScreenController } from '@/components/splash-screen-controller';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useAppFonts } from '@/hooks/use-app-fonts';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 import AuthProvider from '@/providers/auth-provider';
 import { colors, fontFamily } from '@/constants/theme';
 
@@ -22,7 +23,8 @@ const pushedScreenOptions = {
 } as const;
 
 function RootNavigator() {
-  const { isLoggedIn, needsOnboarding } = useAuthContext();
+  const { isLoggedIn, needsOnboarding, session } = useAuthContext();
+  usePushNotifications(isLoggedIn && !needsOnboarding ? session?.user?.id : undefined);
 
   return (
     <Stack>

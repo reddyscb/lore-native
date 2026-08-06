@@ -20,6 +20,12 @@ appId: com.reddyscb.lore
 - extendedWaitUntil:
     visible: "Home"
     timeout: 15000
+# The feed grows with every drop posted across sessions — scroll to find
+# the card rather than assuming it's in the first viewport.
+- scrollUntilVisible:
+    element: ".*Ruskin & Rye.*"
+    direction: DOWN
+    timeout: 10000
 - tapOn: ".*Ruskin & Rye.*"
 - extendedWaitUntil:
     visible: "Save to a collection (e.g. Date spots)"

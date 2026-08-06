@@ -19,4 +19,10 @@ appId: com.reddyscb.lore
 - tapOn: "Reply…"
 - inputText: "Maestro regression reply"
 - tapOn: "Post"
-- assertVisible: ".*Maestro regression reply.*"
+# The reply list grows with every past run of this flow (and real seed
+# replies) — scroll to the new reply rather than assuming it's already in
+# the viewport.
+- scrollUntilVisible:
+    element: ".*Maestro regression reply.*"
+    direction: DOWN
+    timeout: 8000

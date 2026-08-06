@@ -52,7 +52,13 @@ function VideoThumb({ uri }: { uri: string }) {
   });
 
   return (
-    <VideoView player={player} style={styles.thumb} nativeControls allowsFullscreen contentFit="cover" />
+    <VideoView
+      player={player}
+      style={styles.thumb}
+      nativeControls
+      fullscreenOptions={{ enable: true }}
+      contentFit="cover"
+    />
   );
 }
 

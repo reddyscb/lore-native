@@ -104,7 +104,8 @@ export async function fetchDishes(placeId: string): Promise<Dish[]> {
     .from('dishes')
     .select('*')
     .eq('place_id', placeId)
-    .order('rating', { ascending: false });
+    .order('rating', { ascending: false })
+    .limit(100);
 
   if (error) throw error;
   return (data ?? []) as Dish[];
@@ -115,7 +116,8 @@ export async function fetchPlaceDrops(placeId: string): Promise<Drop[]> {
     .from('drops')
     .select(`*, ${DROP_AUTHOR}, drop_replies(*, ${REPLY_AUTHOR}), ${DROP_TAGS}, ${DROP_MEDIA}`)
     .eq('place_id', placeId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (error) throw error;
   return sortDropMedia((data ?? []) as unknown as Drop[]);
@@ -135,7 +137,7 @@ export async function searchPlaces(params: {
   if (params.area) request = request.eq('area', params.area);
   if (params.priceRange) request = request.eq('price_range', params.priceRange);
 
-  const { data, error } = await request;
+  const { data, error } = await request.limit(200);
   if (error) throw error;
   return (data ?? []) as PlaceSummary[];
 }
@@ -420,7 +422,8 @@ export async function fetchDiaryEntries(ownerId: string): Promise<DiaryEntry[]> 
     .from('diary_entries')
     .select('*, places(name)')
     .eq('owner_id', ownerId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (error) throw error;
   return (data ?? []) as unknown as DiaryEntry[];
@@ -476,7 +479,8 @@ export async function fetchEvents(): Promise<EventRow[]> {
   const { data, error } = await supabase
     .from('events')
     .select('*, places(name)')
-    .order('event_date');
+    .order('event_date')
+    .limit(100);
 
   if (error) throw error;
   return (data ?? []) as unknown as EventRow[];
@@ -525,4 +529,17 @@ export async function reserveTickets(
 
   if (ticketError) throw ticketError;
   return 'ok';
+}
+
+/* ------------------------------------------------------------------ *
+ * Push notifications
+ * ------------------------------------------------------------------ */
+
+/** Registers (or re-registers) this device's Expo push token for a user. */
+export async function registerPushToken(userId: string, token: string): Promise<void> {
+  const { error } = await supabase
+    .from('push_tokens')
+    .upsert({ user_id: userId, token }, { onConflict: 'user_id,token', ignoreDuplicates: true });
+
+  if (error) throw error;
 }

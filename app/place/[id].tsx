@@ -45,20 +45,40 @@ export default function PlaceDetailScreen() {
   const { profile, session } = useAuthContext();
   const authorId = profile?.id ?? session?.user?.id ?? '';
   const { id } = useLocalSearchParams<{ id: string }>();
+  // `place` gates the initial paint (it's a fast single-row lookup, and we
+  // need it for the header regardless), but dishes/drops load independently
+  // afterward with their own small inline spinners rather than blocking the
+  // whole screen on whichever of the three queries is slowest.
   const [place, setPlace] = useState<Place | null>(null);
+  const [placeNotFound, setPlaceNotFound] = useState(false);
   const [dishes, setDishes] = useState<Dish[]>([]);
+  const [dishesLoading, setDishesLoading] = useState(true);
   const [drops, setDrops] = useState<Drop[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dropsLoading, setDropsLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([fetchPlace(id), fetchDishes(id), fetchPlaceDrops(id)])
-      .then(([placeData, dishData, dropData]) => {
-        setPlace(placeData);
-        setDishes(dishData);
-        setDrops(dropData);
-      })
-      .finally(() => setLoading(false));
+    setPlace(null);
+    setPlaceNotFound(false);
+    fetchPlace(id)
+      .then(setPlace)
+      .catch(() => setPlaceNotFound(true));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setDishesLoading(true);
+    fetchDishes(id)
+      .then(setDishes)
+      .finally(() => setDishesLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    setDropsLoading(true);
+    fetchPlaceDrops(id)
+      .then(setDrops)
+      .finally(() => setDropsLoading(false));
   }, [id]);
 
   const [savedIn, setSavedIn] = useState<Collection[]>([]);
@@ -68,18 +88,14 @@ export default function PlaceDetailScreen() {
     fetchCollectionsForPlace(authorId, id).then(setSavedIn);
   }, [id, authorId]);
 
-  if (loading) {
-    return (
-      <ScreenContainer hasHeader style={styles.centered}>
-        <ActivityIndicator color={colors.raspberry} />
-      </ScreenContainer>
-    );
-  }
-
   if (!place) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
-        <Text style={styles.empty}>Couldn&apos;t find this café.</Text>
+        {placeNotFound ? (
+          <Text style={styles.empty}>Couldn&apos;t find this café.</Text>
+        ) : (
+          <ActivityIndicator color={colors.raspberry} />
+        )}
       </ScreenContainer>
     );
   }
@@ -133,45 +149,54 @@ export default function PlaceDetailScreen() {
           </Card>
         )}
 
-        {dishes.length > 0 && (
+        {(dishesLoading || dishes.length > 0) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Menu highlights</Text>
-            {dishes.map((dish) => (
-              <Card key={dish.id} style={styles.dishCard}>
-                <View style={styles.dishRow}>
-                  <Text style={styles.dishName}>{dish.name}</Text>
-                  {dish.rating != null && <Text style={styles.dishRating}>{dish.rating}★</Text>}
-                </View>
-                {dish.tag && <Chip label={dish.tag} />}
-              </Card>
-            ))}
+            {dishesLoading ? (
+              <ActivityIndicator color={colors.raspberry} />
+            ) : (
+              dishes.map((dish) => (
+                <Card key={dish.id} style={styles.dishCard}>
+                  <View style={styles.dishRow}>
+                    <Text style={styles.dishName}>{dish.name}</Text>
+                    {dish.rating != null && <Text style={styles.dishRating}>{dish.rating}★</Text>}
+                  </View>
+                  {dish.tag && <Chip label={dish.tag} />}
+                </Card>
+              ))
+            )}
           </View>
         )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Drops</Text>
-          {drops.length === 0 && <Text style={styles.empty}>No drops for this place yet.</Text>}
-          {drops.map((drop) => (
-            <View key={drop.id}>
-              <DropCard drop={drop} />
-              {drop.drop_replies?.map((reply) => <ReplyRow key={reply.id} reply={reply} />)}
-              {authorId && (
-                <ReplyComposer
-                  dropId={drop.id}
-                  authorId={authorId}
-                  onReplyAdded={(reply) => {
-                    setDrops((prev) =>
-                      prev.map((d) =>
-                        d.id === drop.id
-                          ? { ...d, drop_replies: [...(d.drop_replies ?? []), reply] }
-                          : d
-                      )
-                    );
-                  }}
-                />
-              )}
-            </View>
-          ))}
+          {dropsLoading ? (
+            <ActivityIndicator color={colors.raspberry} />
+          ) : drops.length === 0 ? (
+            <Text style={styles.empty}>No drops for this place yet.</Text>
+          ) : (
+            drops.map((drop) => (
+              <View key={drop.id}>
+                <DropCard drop={drop} />
+                {drop.drop_replies?.map((reply) => <ReplyRow key={reply.id} reply={reply} />)}
+                {authorId && (
+                  <ReplyComposer
+                    dropId={drop.id}
+                    authorId={authorId}
+                    onReplyAdded={(reply) => {
+                      setDrops((prev) =>
+                        prev.map((d) =>
+                          d.id === drop.id
+                            ? { ...d, drop_replies: [...(d.drop_replies ?? []), reply] }
+                            : d
+                        )
+                      );
+                    }}
+                  />
+                )}
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </ScreenContainer>
