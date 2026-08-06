@@ -48,6 +48,12 @@ export function DropCard({ drop, place }: Props) {
         <Text style={styles.timestamp}>{formatRelativeTime(drop.created_at)}</Text>
       </View>
 
+      {drop.drop_tags && drop.drop_tags.length > 0 && (
+        <Text style={styles.tagged}>
+          with {drop.drop_tags.map((t) => t.profiles?.display_name ?? 'someone').join(', ')}
+        </Text>
+      )}
+
       {FIELDS.map(({ key, label }) => {
         const value = drop[key];
         if (!value || typeof value !== 'string') return null;
@@ -109,6 +115,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.mono,
     fontSize: fontSize.xs,
     color: colors.inkSoft,
+  },
+  tagged: {
+    fontFamily: fontFamily.body,
+    fontSize: fontSize.xs,
+    color: colors.inkSoft,
+    marginTop: -spacing.xs,
   },
   fieldRow: {
     gap: 2,

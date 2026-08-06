@@ -1,14 +1,26 @@
 import { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Card } from '@/components/ui/Card';
 import { Chip } from '@/components/ui/Chip';
+import { Button } from '@/components/ui/Button';
+import { TextField } from '@/components/ui/TextField';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DropCard } from '@/components/ui/DropCard';
 import { ReplyRow } from '@/components/ui/ReplyRow';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { fetchPlace, fetchDishes, fetchPlaceDrops, type Place, type Dish, type Drop } from '@/lib/queries';
+import { useAuthContext } from '@/hooks/use-auth-context';
+import {
+  fetchPlace,
+  fetchDishes,
+  fetchPlaceDrops,
+  createReply,
+  type Place,
+  type Dish,
+  type Drop,
+  type DropReply,
+} from '@/lib/queries';
 
 const LORE_FIELDS: { key: keyof Place; label: string }[] = [
   { key: 'go_for', label: 'Go for' },
@@ -17,6 +29,9 @@ const LORE_FIELDS: { key: keyof Place; label: string }[] = [
 ];
 
 export default function PlaceDetailScreen() {
+  const router = useRouter();
+  const { profile, session } = useAuthContext();
+  const authorId = profile?.id ?? session?.user?.id ?? '';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [place, setPlace] = useState<Place | null>(null);
   const [dishes, setDishes] = useState<Dish[]>([]);
@@ -52,13 +67,19 @@ export default function PlaceDetailScreen() {
 
   return (
     <ScreenContainer padded={false}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.name}>{place.name}</Text>
         <Text style={styles.meta}>
           {[place.area, place.price_range].filter(Boolean).join(' · ')}
         </Text>
         {place.tagline && <Text style={styles.tagline}>{place.tagline}</Text>}
         <StatusBadge status={place.status} reopenDate={place.reopen_date} />
+
+        <Button
+          label="Drop lore about this place"
+          variant="ghost"
+          onPress={() => router.push({ pathname: '/(tabs)/post', params: { placeId: place.id } })}
+        />
 
         {LORE_FIELDS.some(({ key }) => place[key]) && (
           <Card style={styles.section}>
@@ -97,11 +118,67 @@ export default function PlaceDetailScreen() {
             <View key={drop.id}>
               <DropCard drop={drop} />
               {drop.drop_replies?.map((reply) => <ReplyRow key={reply.id} reply={reply} />)}
+              {authorId && (
+                <ReplyComposer
+                  dropId={drop.id}
+                  authorId={authorId}
+                  onReplyAdded={(reply) => {
+                    setDrops((prev) =>
+                      prev.map((d) =>
+                        d.id === drop.id
+                          ? { ...d, drop_replies: [...(d.drop_replies ?? []), reply] }
+                          : d
+                      )
+                    );
+                  }}
+                />
+              )}
             </View>
           ))}
         </View>
       </ScrollView>
     </ScreenContainer>
+  );
+}
+
+function ReplyComposer({
+  dropId,
+  authorId,
+  onReplyAdded,
+}: {
+  dropId: string;
+  authorId: string;
+  onReplyAdded: (reply: DropReply) => void;
+}) {
+  const [body, setBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit() {
+    if (!body.trim()) return;
+    setSubmitting(true);
+    try {
+      const reply = await createReply(dropId, authorId, body.trim());
+      onReplyAdded(reply);
+      setBody('');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <View style={styles.replyComposer}>
+      <TextField
+        placeholder="Reply…"
+        value={body}
+        onChangeText={setBody}
+        style={styles.replyInput}
+      />
+      <Pressable onPress={onSubmit} disabled={submitting || !body.trim()}>
+        <Text style={[styles.replySubmit, (submitting || !body.trim()) && styles.replySubmitDisabled]}>
+          Post
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -181,5 +258,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.inkSoft,
     textAlign: 'center',
+  },
+  replyComposer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginLeft: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  replyInput: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  replySubmit: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.raspberry,
+  },
+  replySubmitDisabled: {
+    color: colors.inkSoft,
   },
 });
