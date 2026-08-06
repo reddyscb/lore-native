@@ -32,8 +32,8 @@ export default function PhoneScreen() {
   return (
     <ScreenContainer>
       <View style={styles.content}>
-        <Text style={styles.title}>What's your number?</Text>
-        <Text style={styles.subtitle}>We'll text you a code to confirm it's you.</Text>
+        <Text style={styles.title}>What&apos;s your number?</Text>
+        <Text style={styles.subtitle}>We&apos;ll text you a code to confirm it&apos;s you.</Text>
 
         <TextField
           label="Phone number"
