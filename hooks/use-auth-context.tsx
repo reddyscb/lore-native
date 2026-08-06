@@ -6,6 +6,7 @@ export type Profile = {
   display_name: string | null;
   role: string | null;
   onboarded: boolean | null;
+  avatar_url: string | null;
 };
 
 export type AuthData = {

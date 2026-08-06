@@ -1,15 +1,61 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Avatar } from '@/components/ui/Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { supabase } from '@/lib/supabase';
+import { updateAvatar } from '@/lib/queries';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session, refreshProfile } = useAuthContext();
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  async function onChangeAvatar() {
+    const userId = profile?.id ?? session?.user?.id;
+    if (!userId) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Photo access needed',
+        'Allow photo library access in Settings to set a profile photo.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+    const asset = result.assets[0];
+
+    setUploadingAvatar(true);
+    try {
+      await updateAvatar(userId, {
+        uri: asset.uri,
+        mediaType: 'image',
+        mimeType: asset.mimeType ?? 'image/jpeg',
+      });
+      await refreshProfile();
+    } catch (error) {
+      Alert.alert(
+        'Could not update photo',
+        error instanceof Error ? error.message : 'Something went wrong.'
+      );
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
 
   async function onSignOut() {
     await supabase.auth.signOut();
@@ -19,6 +65,11 @@ export default function ProfileScreen() {
   return (
     <ScreenContainer>
       <Text style={styles.title}>Profile</Text>
+
+      <Pressable style={styles.avatarRow} onPress={onChangeAvatar} disabled={uploadingAvatar}>
+        <Avatar uri={profile?.avatar_url} name={profile?.display_name} size={72} />
+        <Text style={styles.avatarLabel}>{uploadingAvatar ? 'Uploading…' : 'Change photo'}</Text>
+      </Pressable>
 
       <Card style={styles.card}>
         <Text style={styles.label}>Display name</Text>
@@ -56,6 +107,17 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginTop: spacing.lg,
     marginBottom: spacing.lg,
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  avatarLabel: {
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.raspberry,
   },
   card: {
     gap: spacing.xs,

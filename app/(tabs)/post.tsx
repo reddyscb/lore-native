@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +18,7 @@ import { TextField } from '@/components/ui/TextField';
 import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { PlaceListItem } from '@/components/ui/PlaceListItem';
+import { MediaStrip } from '@/components/ui/MediaStrip';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
@@ -25,9 +27,15 @@ import {
   searchPlaces,
   searchProfiles,
   tagProfilesOnDrop,
+  uploadDropMedia,
+  type PickedMedia,
   type PlaceSummary,
   type ProfileSearchResult,
 } from '@/lib/queries';
+
+const MAX_DROP_MEDIA = 4;
+
+type PickedMediaItem = PickedMedia & { id: string };
 
 export default function PostScreen() {
   const { profile, session } = useAuthContext();
@@ -125,7 +133,39 @@ function ComposeForm({
   const [friendQuery, setFriendQuery] = useState('');
   const [friendResults, setFriendResults] = useState<ProfileSearchResult[]>([]);
   const [taggedFriends, setTaggedFriends] = useState<ProfileSearchResult[]>([]);
+  const [media, setMedia] = useState<PickedMediaItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  async function pickMedia() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Photo access needed', 'Allow photo library access in Settings to attach media.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      allowsMultipleSelection: true,
+      selectionLimit: MAX_DROP_MEDIA - media.length,
+      quality: 0.7,
+      videoMaxDuration: 60,
+    });
+
+    if (result.canceled) return;
+
+    const picked: PickedMediaItem[] = result.assets.map((asset, index) => ({
+      id: `${Date.now()}-${index}`,
+      uri: asset.uri,
+      mediaType: asset.type === 'video' ? 'video' : 'image',
+      mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+    }));
+
+    setMedia((prev) => [...prev, ...picked].slice(0, MAX_DROP_MEDIA));
+  }
+
+  function removeMedia(id: string) {
+    setMedia((prev) => prev.filter((item) => item.id !== id));
+  }
 
   useEffect(() => {
     if (!friendQuery.trim() || !authorId) {
@@ -138,9 +178,9 @@ function ComposeForm({
     return () => clearTimeout(timeout);
   }, [friendQuery, authorId]);
 
-  const hasContent = Object.entries(fields).some(
-    ([key, value]) => key !== 'damage' && value.trim().length > 0
-  );
+  const hasContent =
+    media.length > 0 ||
+    Object.entries(fields).some(([key, value]) => key !== 'damage' && value.trim().length > 0);
 
   function updateField(key: keyof FormFields, value: string) {
     setFields((prev) => ({ ...prev, [key]: value }));
@@ -175,8 +215,11 @@ function ComposeForm({
         taggedFriends.map((f) => f.id)
       );
 
+      await uploadDropMedia(dropId, media);
+
       setFields(EMPTY_FORM);
       setTaggedFriends([]);
+      setMedia([]);
       router.push(`/place/${place.id}`);
     } catch (error) {
       Alert.alert('Could not post', error instanceof Error ? error.message : 'Something went wrong.');
@@ -199,6 +242,21 @@ function ComposeForm({
             <Pressable onPress={onChangePlace}>
               <Text style={styles.changeLink}>Change</Text>
             </Pressable>
+          </View>
+
+          <View style={styles.mediaSection}>
+            <MediaStrip
+              media={media.map((m) => ({ id: m.id, media_type: m.mediaType, url: m.uri }))}
+              onRemove={removeMedia}
+            />
+            {media.length < MAX_DROP_MEDIA && (
+              <Button
+                label={media.length === 0 ? 'Add photo or video' : 'Add more'}
+                variant="secondary"
+                inline
+                onPress={pickMedia}
+              />
+            )}
           </View>
 
           <TextField
@@ -345,6 +403,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyMedium,
     fontSize: fontSize.sm,
     color: colors.raspberry,
+  },
+  mediaSection: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   field: {
     marginBottom: spacing.md,

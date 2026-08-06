@@ -1,0 +1,32 @@
+appId: com.reddyscb.lore
+---
+# Covers what's automatable about Phase 5 (drop photo/video attachments +
+# profile avatars): that the media section renders in the compose flow, and
+# that the Profile tab's avatar/"Change photo" affordance renders.
+#
+# Actually picking a photo or video opens the native OS picker sheet, which
+# Maestro cannot drive — the same category of limitation as Google OAuth's
+# browser sheet (see CLAUDE.md's Auth architecture section). That step stays
+# manual: verify in Simulator with a photo (and a short video) seeded into
+# its library first via `xcrun simctl addmedia <udid> <path>`.
+#
+# Assumes seed data: a place named "The Copper Pot". Assumes a signed-in
+# session already exists in the simulator.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+
+- tapOn: ".*Drop lore.*"
+- tapOn: "Search cafés by name"
+- inputText: "Copper"
+- extendedWaitUntil:
+    visible: ".*The Copper Pot.*"
+    timeout: 8000
+- tapOn: ".*The Copper Pot.*"
+- assertVisible: "Change"
+- assertVisible: "Add photo or video"
+
+- tapOn: ".*Profile.*"
+- assertVisible: "Change photo"

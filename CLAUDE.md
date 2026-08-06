@@ -167,8 +167,36 @@ rewrite actually needs:
   touched every existing screen, and added `ScreenContainer`'s `hasHeader`
   prop (pushed screens under a nav header pass `hasHeader` so the top safe-
   area inset isn't double-applied).
-- **Later:** push notifications, photo/video upload (Supabase Storage —
-  not built on web either yet), owner dashboard, a dedicated polish pass
+- **Phase 5 — done, verified end-to-end (including real uploads to
+  Supabase Storage).** Photo/video attachments on drops, and profile
+  avatars — greenfield on both native and web (neither had any image
+  upload before this; `expo-image` was installed but unused). New Storage
+  buckets `drop-media` (images + `video/mp4`/`video/quicktime`, 50MB limit)
+  and `avatars` (images only, 10MB limit), both public-read with
+  owner-scoped write RLS keyed off the storage path's first folder segment
+  (`{drop_id}/...`, `{user_id}/...`) — see the `phase5_drop_media_and_avatars`
+  migration (applied directly via Supabase MCP, same as prior phases; no
+  local migrations folder exists in this repo). New table `drop_media`
+  (`drop_id`, `media_type: image|video`, `url`, `position`), RLS mirroring
+  `drop_tags`. Compose flow (`app/(tabs)/post.tsx`) gained a picker for up
+  to 4 photos/videos (`expo-image-picker`, `videoMaxDuration: 60` since
+  nothing transcodes on the way in) shown as a removable preview strip;
+  upload happens after `createDrop` returns an id, keyed into the storage
+  path. `DropCard` renders attachments via the new
+  `components/ui/MediaStrip.tsx` (images via `expo-image`, video via
+  `expo-video`'s `VideoView` with native controls, no autoplay) and a new
+  `components/ui/Avatar.tsx` (circular photo, falls back to the name's
+  first initial) now renders everywhere `profiles.avatar_url` already
+  flowed but was previously unused (`DropCard` author row, `ReplyRow`).
+  Profile tab grew a tap-to-change avatar (uploads to a fixed
+  `{user_id}/avatar.<ext>` path with `upsert: true`, cache-busted with a
+  `?updated=` query param since the URL would otherwise stay identical
+  across re-uploads). Dish/place photos were explicitly deferred — dishes
+  are owner-only writes with no creation UI in this app at all yet, so
+  that's owner-dashboard scope, not this phase. Adding `expo-image-picker`
+  needed an `app.json` plugin entry (photo library + camera permission
+  strings) and thus a full native rebuild (`npx expo run:ios`).
+- **Later:** push notifications, owner dashboard, a dedicated polish pass
   (list virtualization, image caching, transition tuning), then store
   submission prep.
 
@@ -189,9 +217,10 @@ owner dashboard later. It's a snapshot, not a live mirror — re-clone or
 
 `maestro/*.yaml` holds a Maestro E2E suite covering the flows built so far
 (Profile smoke test, Home feed + café detail, Explore search/filter, the
-compose-and-tag write path, the reply composer, and Phase 4's
+compose-and-tag write path, the reply composer, Phase 4's
 passport/diary, check-in, collections, and events/ticket-reservation
-flows). Run it with `npm run test:e2e` — this runs each flow one at a time
+flows, and Phase 5's media section/avatar affordance smoke test). Run it
+with `npm run test:e2e` — this runs each flow one at a time
 via `scripts/test-e2e.sh` against a booted Simulator with the app already
 installed (running the whole `maestro/` folder at once via
 `maestro test maestro/` showed scheduling flakiness; one at a time is
@@ -261,6 +290,15 @@ flows:**
   *interactive* elements from dismissing the keyboard, so a tap on inert
   text still blurs and dismisses normally. `hideKeyboard` (above) does not
   fix this — it fails outright when tried here.
+- **Native photo/video picker sheets can't be driven by Maestro** — found
+  writing Phase 5's flow. `expo-image-picker`'s library sheet is OS UI, not
+  app UI, same category of limitation as Google OAuth's browser sheet (see
+  "Auth architecture" above). `phase5-media.yaml` only asserts the picker
+  *button* renders; actually picking a photo/video stays a manual Simulator
+  check (seed a test photo/video into its library first via
+  `xcrun simctl addmedia <udid> <path>` — a few seconds of
+  `xcrun simctl io <udid> recordVideo out.mov` makes a throwaway test video
+  when nothing else is handy).
 
 **Real bugs this suite caught, not just test flakiness:** the Explore
 tab, Post tab's place picker, and café detail's reply box were all

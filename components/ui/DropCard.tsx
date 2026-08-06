@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { StatusBadge } from './StatusBadge';
+import { Avatar } from './Avatar';
+import { MediaStrip } from './MediaStrip';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatRelativeTime } from '@/lib/format';
 import type { Drop } from '@/lib/queries';
@@ -44,7 +46,10 @@ export function DropCard({ drop, place }: Props) {
       )}
 
       <View style={styles.authorRow}>
-        <Text style={styles.author}>{drop.profiles?.display_name ?? 'Someone'}</Text>
+        <View style={styles.authorIdentity}>
+          <Avatar uri={drop.profiles?.avatar_url} name={drop.profiles?.display_name} size={28} />
+          <Text style={styles.author}>{drop.profiles?.display_name ?? 'Someone'}</Text>
+        </View>
         <Text style={styles.timestamp}>{formatRelativeTime(drop.created_at)}</Text>
       </View>
 
@@ -53,6 +58,8 @@ export function DropCard({ drop, place }: Props) {
           with {drop.drop_tags.map((t) => t.profiles?.display_name ?? 'someone').join(', ')}
         </Text>
       )}
+
+      {drop.drop_media && drop.drop_media.length > 0 && <MediaStrip media={drop.drop_media} />}
 
       {FIELDS.map(({ key, label }) => {
         const value = drop[key];
@@ -105,6 +112,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  authorIdentity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   author: {
     fontFamily: fontFamily.bodyMedium,

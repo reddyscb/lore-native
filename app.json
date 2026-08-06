@@ -43,7 +43,15 @@
       ],
       "expo-secure-store",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "lore. needs access to your photos so you can attach pictures and videos to your drops.",
+          "cameraPermission": "lore. needs access to your camera so you can take a photo or video for your drop."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

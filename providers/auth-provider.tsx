@@ -28,7 +28,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
   async function fetchProfile(userId: string) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, role, onboarded')
+      .select('id, display_name, role, onboarded, avatar_url')
       .eq('id', userId)
       .maybeSingle();
 

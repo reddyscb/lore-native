@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { Avatar } from './Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { formatRelativeTime } from '@/lib/format';
 import type { DropReply } from '@/lib/queries';
@@ -10,22 +11,31 @@ type Props = {
 export function ReplyRow({ reply }: Props) {
   return (
     <View style={styles.row}>
-      <Text style={styles.body}>
-        <Text style={styles.author}>{reply.profiles?.display_name ?? 'Someone'} </Text>
-        {reply.body}
-      </Text>
-      <Text style={styles.timestamp}>{formatRelativeTime(reply.created_at)}</Text>
+      <Avatar uri={reply.profiles?.avatar_url} name={reply.profiles?.display_name} size={22} />
+      <View style={styles.content}>
+        <Text style={styles.body}>
+          <Text style={styles.author}>{reply.profiles?.display_name ?? 'Someone'} </Text>
+          {reply.body}
+        </Text>
+        <Text style={styles.timestamp}>{formatRelativeTime(reply.created_at)}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
     marginLeft: spacing.lg,
     marginTop: spacing.xs,
     paddingLeft: spacing.md,
     borderLeftWidth: 2,
     borderLeftColor: colors.border,
+  },
+  content: {
+    flex: 1,
   },
   body: {
     fontFamily: fontFamily.body,

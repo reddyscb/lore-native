@@ -44,6 +44,13 @@ export type DropReply = {
   profiles: Profile | null;
 };
 
+export type DropMedia = {
+  id: string;
+  media_type: 'image' | 'video';
+  url: string;
+  position: number;
+};
+
 export type Drop = {
   id: string;
   place_id: string;
@@ -59,21 +66,30 @@ export type Drop = {
   places?: Pick<Place, 'name' | 'area' | 'status' | 'cover_color'>;
   drop_replies?: DropReply[];
   drop_tags?: { profiles: Profile }[];
+  drop_media?: DropMedia[];
 };
 
 const DROP_AUTHOR = 'profiles!drops_author_id_fkey(display_name, avatar_url)';
 const REPLY_AUTHOR = 'profiles!drop_replies_author_id_fkey(display_name, avatar_url)';
 const DROP_TAGS = 'drop_tags(profiles!drop_tags_tagged_profile_id_fkey(display_name, avatar_url))';
+const DROP_MEDIA = 'drop_media(id, media_type, url, position)';
 
 export async function fetchDropFeed(): Promise<Drop[]> {
   const { data, error } = await supabase
     .from('drops')
-    .select(`*, places(name, area, status, cover_color), ${DROP_AUTHOR}, ${DROP_TAGS}`)
+    .select(`*, places(name, area, status, cover_color), ${DROP_AUTHOR}, ${DROP_TAGS}, ${DROP_MEDIA}`)
     .order('created_at', { ascending: false })
     .limit(30);
 
   if (error) throw error;
-  return (data ?? []) as unknown as Drop[];
+  return sortDropMedia((data ?? []) as unknown as Drop[]);
+}
+
+function sortDropMedia(drops: Drop[]): Drop[] {
+  for (const drop of drops) {
+    drop.drop_media?.sort((a, b) => a.position - b.position);
+  }
+  return drops;
 }
 
 export async function fetchPlace(id: string): Promise<Place> {
@@ -97,12 +113,12 @@ export async function fetchDishes(placeId: string): Promise<Dish[]> {
 export async function fetchPlaceDrops(placeId: string): Promise<Drop[]> {
   const { data, error } = await supabase
     .from('drops')
-    .select(`*, ${DROP_AUTHOR}, drop_replies(*, ${REPLY_AUTHOR}), ${DROP_TAGS}`)
+    .select(`*, ${DROP_AUTHOR}, drop_replies(*, ${REPLY_AUTHOR}), ${DROP_TAGS}, ${DROP_MEDIA}`)
     .eq('place_id', placeId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as unknown as Drop[];
+  return sortDropMedia((data ?? []) as unknown as Drop[]);
 }
 
 export async function searchPlaces(params: {
@@ -168,6 +184,80 @@ export async function tagProfilesOnDrop(dropId: string, profileIds: string[]): P
     .insert(profileIds.map((tagged_profile_id) => ({ drop_id: dropId, tagged_profile_id })));
 
   if (error) throw error;
+}
+
+/* ------------------------------------------------------------------ *
+ * Media (drop photos/videos, profile avatars)
+ *
+ * Both buckets are public-read with owner-scoped write RLS keyed off the
+ * storage path's first folder segment — `{drop_id}/...` for drop-media,
+ * `{user_id}/...` for avatars. See the `phase5_drop_media_and_avatars`
+ * migration for the exact policies.
+ * ------------------------------------------------------------------ */
+
+export type PickedMedia = {
+  uri: string;
+  mediaType: 'image' | 'video';
+  mimeType: string;
+};
+
+const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/heic': 'heic',
+  'image/webp': 'webp',
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+};
+
+async function uploadFile(
+  bucket: string,
+  path: string,
+  uri: string,
+  mimeType: string
+): Promise<string> {
+  const arraybuffer = await fetch(uri).then((res) => res.arrayBuffer());
+  const { error } = await supabase.storage
+    .from(bucket)
+    .upload(path, arraybuffer, { contentType: mimeType, upsert: true });
+
+  if (error) throw error;
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+
+/** Uploads each picked file to the `drop-media` bucket and links it to the drop. */
+export async function uploadDropMedia(dropId: string, media: PickedMedia[]): Promise<void> {
+  if (media.length === 0) return;
+
+  const rows = await Promise.all(
+    media.map(async (item, index) => {
+      const ext = EXTENSION_BY_MIME_TYPE[item.mimeType] ?? 'bin';
+      const path = `${dropId}/${index}-${Date.now()}.${ext}`;
+      const url = await uploadFile('drop-media', path, item.uri, item.mimeType);
+      return { drop_id: dropId, media_type: item.mediaType, url, position: index };
+    })
+  );
+
+  const { error } = await supabase.from('drop_media').insert(rows);
+  if (error) throw error;
+}
+
+/**
+ * Uploads to a fixed `{user_id}/avatar.<ext>` path (so re-uploading replaces
+ * the old file via `upsert`) and writes the public URL onto the profile.
+ * A cache-busting query param is appended since the URL would otherwise stay
+ * identical across re-uploads, leaving `expo-image` showing the stale photo.
+ */
+export async function updateAvatar(userId: string, media: PickedMedia): Promise<string> {
+  const ext = EXTENSION_BY_MIME_TYPE[media.mimeType] ?? 'jpg';
+  const path = `${userId}/avatar.${ext}`;
+  const url = await uploadFile('avatars', path, media.uri, media.mimeType);
+  const bustedUrl = `${url}?updated=${Date.now()}`;
+
+  const { error } = await supabase.from('profiles').update({ avatar_url: bustedUrl }).eq('id', userId);
+  if (error) throw error;
+
+  return bustedUrl;
 }
 
 export async function createReply(
