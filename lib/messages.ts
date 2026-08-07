@@ -156,7 +156,11 @@ export async function sendMessageMedia(
 
   if (uploadError) {
     // Partial failure: clean up the orphaned row so it doesn't appear as a blank message to the other participant.
-    await supabase.from('messages').delete().eq('id', message.id);
+    try {
+      await supabase.from('messages').delete().eq('id', message.id);
+    } catch {
+      // Best-effort cleanup — ignore failures here, the real error is uploadError below.
+    }
     throw uploadError;
   }
 
@@ -169,7 +173,11 @@ export async function sendMessageMedia(
 
   if (updateError) {
     // Partial failure: clean up the orphaned row so it doesn't appear as a blank message to the other participant.
-    await supabase.from('messages').delete().eq('id', message.id);
+    try {
+      await supabase.from('messages').delete().eq('id', message.id);
+    } catch {
+      // Best-effort cleanup — ignore failures here, the real error is updateError below.
+    }
     throw updateError;
   }
 
