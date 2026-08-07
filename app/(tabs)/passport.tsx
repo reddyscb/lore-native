@@ -9,16 +9,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { MessagesIcon } from '@/components/ui/MessagesIcon';
-import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { fetchStampedPlaceIds, searchPlaces, type PlaceSummary } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { Card } from '@/shared/components/Card';
+import { Button } from '@/shared/components/Button';
+import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
+import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { fetchStampedPlaceIds, searchPlaces, type PlaceSummary } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function PassportScreen() {
   const router = useRouter();

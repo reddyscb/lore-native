@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { Button } from '@/components/ui/Button';
-import { OtpInput } from '@/components/ui/OtpInput';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { Button } from '@/shared/components/Button';
+import { OtpInput } from '@/features/auth/components/OtpInput';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { supabase } from '@/shared/supabase/supabase';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();

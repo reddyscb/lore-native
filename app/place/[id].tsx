@@ -10,16 +10,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { Card } from '@/components/ui/Card';
-import { Chip } from '@/components/ui/Chip';
-import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/TextField';
-import { StatusBadge } from '@/components/ui/StatusBadge';
-import { DropCard } from '@/components/ui/DropCard';
-import { ReplyRow } from '@/components/ui/ReplyRow';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { Card } from '@/shared/components/Card';
+import { Chip } from '@/shared/components/Chip';
+import { Button } from '@/shared/components/Button';
+import { TextField } from '@/shared/components/TextField';
+import { StatusBadge } from '@/shared/components/StatusBadge';
+import { DropCard } from '@/features/drops/components/DropCard';
+import { ReplyRow } from '@/features/drops/components/ReplyRow';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
 import {
   fetchPlace,
   fetchDishes,
@@ -33,9 +33,9 @@ import {
   type Drop,
   type DropReply,
   type Collection,
-} from '@/lib/queries';
+} from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 const LORE_FIELDS: { key: keyof Place; label: string }[] = [
   { key: 'go_for', label: 'Go for' },

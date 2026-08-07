@@ -1,16 +1,16 @@
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { TextField } from '@/components/ui/TextField';
-import { Avatar } from '@/components/ui/Avatar';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { searchProfiles, type ProfileSearchResult } from '@/lib/queries';
-import { getOrCreateDirectConversation } from '@/lib/messages';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { TextField } from '@/shared/components/TextField';
+import { Avatar } from '@/shared/components/Avatar';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { searchProfiles, type ProfileSearchResult } from '@/shared/api/queries';
+import { getOrCreateDirectConversation } from '@/features/messages/api/messages';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function NewMessageScreen() {
   const router = useRouter();

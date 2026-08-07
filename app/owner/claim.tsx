@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { PlaceListItem } from '@/components/ui/PlaceListItem';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { fetchUnclaimedPlaces, claimPlace, type PlaceSummary } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { PlaceListItem } from '@/features/places/components/PlaceListItem';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { fetchUnclaimedPlaces, claimPlace, type PlaceSummary } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function ClaimPlaceScreen() {
   const router = useRouter();

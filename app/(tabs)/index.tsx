@@ -9,14 +9,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { DropCard } from '@/components/ui/DropCard';
-import { MessagesIcon } from '@/components/ui/MessagesIcon';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useDropFeed } from '@/hooks/use-drop-feed';
-import type { Drop } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { DropCard } from '@/features/drops/components/DropCard';
+import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useDropFeed } from '@/features/drops/hooks/use-drop-feed';
+import type { Drop } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function HomeScreen() {
   const router = useRouter();

@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 import { router } from 'expo-router';
 
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { Button } from '@/components/ui/Button';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { signInWithGoogle } from '@/lib/oauth';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { Button } from '@/shared/components/Button';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { signInWithGoogle } from '@/features/auth/api/oauth';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function WelcomeScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);

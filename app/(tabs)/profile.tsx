@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Avatar } from '@/components/ui/Avatar';
-import { MessagesIcon } from '@/components/ui/MessagesIcon';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { supabase } from '@/lib/supabase';
-import { updateAvatar } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { Button } from '@/shared/components/Button';
+import { Card } from '@/shared/components/Card';
+import { Avatar } from '@/shared/components/Avatar';
+import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { supabase } from '@/shared/supabase/supabase';
+import { updateAvatar } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function ProfileScreen() {
   const router = useRouter();

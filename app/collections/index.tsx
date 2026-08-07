@@ -1,14 +1,14 @@
 import { memo, useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Card } from '@/components/ui/Card';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { fetchCollections, type CollectionWithCount } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { Card } from '@/shared/components/Card';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { fetchCollections, type CollectionWithCount } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function CollectionsScreen() {
   const router = useRouter();

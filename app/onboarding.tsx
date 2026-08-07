@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View, Alert } from 'react-native';
 
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { Button } from '@/components/ui/Button';
-import { TextField } from '@/components/ui/TextField';
-import { Chip } from '@/components/ui/Chip';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { supabase } from '@/lib/supabase';
-import { useAuthContext } from '@/hooks/use-auth-context';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { Button } from '@/shared/components/Button';
+import { TextField } from '@/shared/components/TextField';
+import { Chip } from '@/shared/components/Chip';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { supabase } from '@/shared/supabase/supabase';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 type Role = 'seeker' | 'owner';
 

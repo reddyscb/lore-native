@@ -14,13 +14,13 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { TextField } from '@/components/ui/TextField';
-import { Avatar } from '@/components/ui/Avatar';
-import { MediaStrip } from '@/components/ui/MediaStrip';
-import { colors, fontFamily, fontSize, radii, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { useMessagesRealtime } from '@/hooks/use-messages-realtime';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { TextField } from '@/shared/components/TextField';
+import { Avatar } from '@/shared/components/Avatar';
+import { MediaStrip } from '@/shared/components/MediaStrip';
+import { colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useMessagesRealtime } from '@/features/messages/hooks/use-messages-realtime';
 import {
   blockUser,
   deleteMessage,
@@ -31,9 +31,9 @@ import {
   sendMessageMedia,
   type Conversation,
   type Message,
-} from '@/lib/messages';
+} from '@/features/messages/api/messages';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function ConversationScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();

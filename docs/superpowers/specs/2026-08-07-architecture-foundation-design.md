@@ -13,10 +13,21 @@ expensive to close.
 **Source document:** the full original analysis (gap assessment, all 10
 foundation steps with code samples, post-foundation enhancements, App
 Store submission path, decision log) is preserved verbatim as
-`docs/superpowers/specs/lore-native-foundation-roadmap.md` in this same
-directory. This file captures the plan CLAUDE.md actually tracks —
+`docs/superpowers/specs/lore-native-foundation-roadmap.md` (v1.0) in this
+same directory. This file captures the plan CLAUDE.md actually tracks —
 the sequencing below supersedes that source document's Part 3/Part 6
 ordering per the review that follows.
+
+**Revision (2026-08-07, same day):** a v2.1 revision of the source
+document (`docs/superpowers/specs/lore-native-foundation-roadmap-v2.1.md`)
+added a product-vision/audience framing that reprioritizes FlashList to
+critical-path severity, plus a new content-strategy and long-term
+infrastructure track that don't belong in this phase. See
+`docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`
+for the full diff and how it was reconciled — the only change it made to
+*this* phase was reinstating FlashList (§ below); Apple Sign-In and the
+content/data-strategy work it also surfaced were deliberately kept out of
+Phase 11's scope and pushed to Phases 12 and 14 respectively.
 
 ## The final goal
 
@@ -62,7 +73,8 @@ instead (types → folders → query → state → errors → observability → 
 
 ## Revised sequencing
 
-Same 10 steps and content as the source document, reordered:
+Same 10 steps and content as the source document, reordered, **plus
+FlashList reinstated as an 11th step** (see below):
 
 1. **Generate Supabase types** (source Step 1 — unchanged, cheap and
    high-value first move)
@@ -80,19 +92,32 @@ Same 10 steps and content as the source document, reordered:
 6. **Feature-based folder restructure** (source Step 2, moved after the
    query POC — now a mechanical move of an already-proven pattern)
 7. **Migrate remaining features to TanStack Query** (source Step 4)
-8. **Zustand for auth state** (source Step 5 — moved to match its actual
+8. **FlashList migration** (source Step 10, reinstated — see below) —
+   slotted immediately after Step 7 because that's the step that already
+   touches every list screen's data-fetching; converting
+   `FlatList`→`FlashList` in the same pass avoids touching each list
+   screen a second time later, and each screen's `estimatedItemSize` is
+   easiest to get right right after its query shape has settled.
+9. **Zustand for auth state** (source Step 5 — moved to match its actual
    Low severity rating, after the higher-value work)
-9. **Feature flags** (source Step 8 — unchanged position, genuinely
-   depends on having Zustand's `useAuthStore` for role targeting)
-10. **PostHog + ATT** (remainder of source Step 7)
+10. **Feature flags** (source Step 8 — unchanged position, genuinely
+    depends on having Zustand's `useAuthStore` for role targeting; gains
+    a `target_cities text[]` column per the v2.1 revision, for the
+    city-by-city rollout geo-gating described in Phase 14)
+11. **PostHog + ATT** (remainder of source Step 7)
 
-**FlashList (source Step 10) is demoted out of the critical path
-entirely**, into Part 4 (Post-Foundation, alongside image compression,
-haptics, offline support). Phase 9's own profiling
+**FlashList is back in the critical path (Step 8 above), reversing this
+doc's original decision to demote it.** The original rationale still
+holds on its own terms — Phase 9's profiling
 (`docs/superpowers/plans/phase9-profiling/`) found no jank to fix at
-current dev-data volume — this is scale headroom, not something blocking
-anything near-term, and doesn't deserve a slot ahead of store-readiness
-work.
+current (tiny) dev-data volume, so there's no *measured* urgency. But the
+v2.1 revision's audience framing (college students scrolling infinitely,
+TikTok/Instagram-trained expectations) makes an explicit product-priority
+argument for treating it as non-negotiable ahead of launch rather than
+opportunistic scale headroom, and that call was made deliberately by the
+user rather than deferred to profiling data — see
+`2026-08-07-phase12-14-roadmap-revision-design.md` for the full
+reasoning.
 
 ## Execution notes
 

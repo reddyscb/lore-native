@@ -2,13 +2,13 @@ import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
-import { SplashScreenController } from '@/components/splash-screen-controller';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { useAppFonts } from '@/hooks/use-app-fonts';
-import { usePushNotifications } from '@/hooks/use-push-notifications';
-import AuthProvider from '@/providers/auth-provider';
-import QueryProvider from '@/providers/query-provider';
-import { colors, fontFamily } from '@/constants/theme';
+import { SplashScreenController } from '@/shared/components/splash-screen-controller';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAppFonts } from '@/shared/hooks/use-app-fonts';
+import { usePushNotifications } from '@/shared/hooks/use-push-notifications';
+import AuthProvider from '@/features/auth/components/auth-provider';
+import QueryProvider from '@/shared/components/query-provider';
+import { colors, fontFamily } from '@/shared/theme/theme';
 
 // Sentry.init must always run (not just when a DSN is set) — Sentry.wrap
 // below expects an initialized client and logs a startup warning

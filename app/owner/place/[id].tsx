@@ -13,13 +13,13 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Chip } from '@/components/ui/Chip';
-import { TextField } from '@/components/ui/TextField';
-import { Button } from '@/components/ui/Button';
-import { StarRating } from '@/components/ui/StarRating';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { Chip } from '@/shared/components/Chip';
+import { TextField } from '@/shared/components/TextField';
+import { Button } from '@/shared/components/Button';
+import { StarRating } from '@/features/owner/components/StarRating';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import {
   fetchPlace,
   fetchDishes,
@@ -31,9 +31,9 @@ import {
   addDish,
   type Place,
   type Dish,
-} from '@/lib/queries';
+} from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 const STATUSES: { id: string; label: string }[] = [
   { id: 'open', label: 'Open as usual' },

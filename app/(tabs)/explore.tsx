@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { TextField } from '@/components/ui/TextField';
-import { Chip } from '@/components/ui/Chip';
-import { PlaceListItem } from '@/components/ui/PlaceListItem';
-import { MessagesIcon } from '@/components/ui/MessagesIcon';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { searchPlaces, type PlaceSummary } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { TextField } from '@/shared/components/TextField';
+import { Chip } from '@/shared/components/Chip';
+import { PlaceListItem } from '@/features/places/components/PlaceListItem';
+import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { searchPlaces, type PlaceSummary } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 const PRICE_RANGES = ['₹', '₹₹', '₹₹₹'];
 

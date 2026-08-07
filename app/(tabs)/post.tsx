@@ -13,16 +13,16 @@ import {
   Text,
   View,
 } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { TextField } from '@/components/ui/TextField';
-import { Chip } from '@/components/ui/Chip';
-import { Button } from '@/components/ui/Button';
-import { PlaceListItem } from '@/components/ui/PlaceListItem';
-import { MediaStrip } from '@/components/ui/MediaStrip';
-import { MessagesIcon } from '@/components/ui/MessagesIcon';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { useCreateDrop } from '@/hooks/use-create-drop';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { TextField } from '@/shared/components/TextField';
+import { Chip } from '@/shared/components/Chip';
+import { Button } from '@/shared/components/Button';
+import { PlaceListItem } from '@/features/places/components/PlaceListItem';
+import { MediaStrip } from '@/shared/components/MediaStrip';
+import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useCreateDrop } from '@/features/drops/hooks/use-create-drop';
 import {
   fetchPlace,
   searchPlaces,
@@ -30,9 +30,9 @@ import {
   type PickedMedia,
   type PlaceSummary,
   type ProfileSearchResult,
-} from '@/lib/queries';
+} from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 const MAX_DROP_MEDIA = 4;
 

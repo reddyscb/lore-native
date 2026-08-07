@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { PlaceListItem } from '@/components/ui/PlaceListItem';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { fetchCollection, type Collection, type PlaceSummary } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { PlaceListItem } from '@/features/places/components/PlaceListItem';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { fetchCollection, type Collection, type PlaceSummary } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function CollectionDetailScreen() {
   const router = useRouter();

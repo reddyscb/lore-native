@@ -9,15 +9,15 @@ import {
   StyleSheet,
   Text,
 } from 'react-native';
-import { ScreenContainer } from '@/components/ui/ScreenContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { TextField } from '@/components/ui/TextField';
-import { Button } from '@/components/ui/Button';
-import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { useAuthContext } from '@/hooks/use-auth-context';
-import { createDiaryEntry, fetchPlace, type Place } from '@/lib/queries';
+import { ScreenContainer } from '@/shared/components/ScreenContainer';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { TextField } from '@/shared/components/TextField';
+import { Button } from '@/shared/components/Button';
+import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
+import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { createDiaryEntry, fetchPlace, type Place } from '@/shared/api/queries';
 
-export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function CheckInScreen() {
   const router = useRouter();
