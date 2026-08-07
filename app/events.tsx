@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -36,21 +36,32 @@ export default function EventsScreen() {
     }, [load])
   );
 
-  async function onReserve(eventId: string, count: number) {
-    if (!userId) return;
-    try {
-      const result = await reserveTickets(eventId, userId, count);
-      setBanner(result === 'ok' ? { kind: 'reserved' } : { kind: 'sold-out' });
-      // Refetch either way: on success to pick up the new count, on failure
-      // because a stale "N left" is exactly what caused the failure.
-      await load();
-    } catch (error) {
-      Alert.alert(
-        'Could not reserve',
-        error instanceof Error ? error.message : 'Something went wrong.'
-      );
-    }
-  }
+  const onReserve = useCallback(
+    async (eventId: string, count: number) => {
+      if (!userId) return;
+      try {
+        const result = await reserveTickets(eventId, userId, count);
+        setBanner(result === 'ok' ? { kind: 'reserved' } : { kind: 'sold-out' });
+        // Refetch either way: on success to pick up the new count, on failure
+        // because a stale "N left" is exactly what caused the failure.
+        await load();
+      } catch (error) {
+        Alert.alert(
+          'Could not reserve',
+          error instanceof Error ? error.message : 'Something went wrong.'
+        );
+      }
+    },
+    [userId, load]
+  );
+
+  const keyExtractor = useCallback((item: EventRow) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: EventRow }) => (
+      <EventCard event={item} canReserve={!!userId} onReserve={(count) => onReserve(item.id, count)} />
+    ),
+    [userId, onReserve]
+  );
 
   if (loading) {
     return (
@@ -62,58 +73,61 @@ export default function EventsScreen() {
 
   return (
     <ScreenContainer hasHeader padded={false}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <PageHeader
-          eyebrow="Events & Pop-Ups"
-          title="What's on this week"
-          subtitle="Ticketed nights and tastings — reserve your spot ahead of time."
-        />
-
-        {banner?.kind === 'reserved' && (
-          <View style={[styles.banner, styles.bannerOk]}>
-            <Text style={styles.bannerText}>Reserved ✓</Text>
-          </View>
-        )}
-        {banner?.kind === 'sold-out' && (
-          <View style={[styles.banner, styles.bannerError]}>
-            <Text style={styles.bannerText}>
-              Not enough tickets left for that request — someone else may have just booked ahead of
-              you.
-            </Text>
-          </View>
-        )}
-
-        {tickets.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your tickets</Text>
-            {tickets.map((ticket) => (
-              <Card key={ticket.id} style={styles.ticketCard}>
-                <Text style={styles.ticketText}>
-                  🎟️ {ticket.count} × {ticket.events?.title ?? 'An event'}
-                </Text>
-              </Card>
-            ))}
-          </View>
-        )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming</Text>
-          {events.length === 0 && <Text style={styles.empty}>Nothing on the calendar yet.</Text>}
-          {events.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              canReserve={!!userId}
-              onReserve={(count) => onReserve(event.id, count)}
+      <FlatList
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        data={events}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
+        ListHeaderComponent={
+          <View>
+            <PageHeader
+              eyebrow="Events & Pop-Ups"
+              title="What's on this week"
+              subtitle="Ticketed nights and tastings — reserve your spot ahead of time."
             />
-          ))}
-        </View>
-      </ScrollView>
+
+            {banner?.kind === 'reserved' && (
+              <View style={[styles.banner, styles.bannerOk]}>
+                <Text style={styles.bannerText}>Reserved ✓</Text>
+              </View>
+            )}
+            {banner?.kind === 'sold-out' && (
+              <View style={[styles.banner, styles.bannerError]}>
+                <Text style={styles.bannerText}>
+                  Not enough tickets left for that request — someone else may have just booked ahead
+                  of you.
+                </Text>
+              </View>
+            )}
+
+            {tickets.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Your tickets</Text>
+                {tickets.map((ticket) => (
+                  <Card key={ticket.id} style={styles.ticketCard}>
+                    <Text style={styles.ticketText}>
+                      🎟️ {ticket.count} × {ticket.events?.title ?? 'An event'}
+                    </Text>
+                  </Card>
+                ))}
+              </View>
+            )}
+
+            <Text style={[styles.sectionTitle, styles.upcomingTitle]}>Upcoming</Text>
+          </View>
+        }
+        ListEmptyComponent={<Text style={styles.empty}>Nothing on the calendar yet.</Text>}
+      />
     </ScreenContainer>
   );
 }
 
-function EventCard({
+const EventCard = memo(function EventCard({
   event,
   canReserve,
   onReserve,
@@ -174,7 +188,7 @@ function EventCard({
       </View>
     </Card>
   );
-}
+});
 
 function Stepper({
   value,
@@ -229,6 +243,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
     marginBottom: spacing.md,
+  },
+  upcomingTitle: {
+    marginTop: spacing.lg,
   },
   banner: {
     borderRadius: radii.card,
