@@ -2,5 +2,26 @@
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   },
-  "includeCoAuthoredBy": false
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "ask": [
+      "Edit(.env)",
+      "Write(.env)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-stale-dev-server.sh\"",
+            "timeout": 15,
+            "statusMessage": "Checking for stale expo/metro processes..."
+          }
+        ]
+      }
+    ]
+  }
 }

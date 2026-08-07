@@ -29,6 +29,24 @@ install), so the user needs to sign in again before Maestro can run.
 
 ## 3. Full regression suite
 
+**Preflight — confirm which dev server will actually serve the app.**
+This has silently invalidated an entire Maestro run twice (Phase 7, Phase 9):
+a stale `expo start`/`expo run:ios` process from an unrelated checkout or
+deleted worktree kept holding the installed dev client's bundler connection,
+so every flow exercised old or nonexistent code while still reporting
+plausible-looking results.
+
+```
+ps aux | grep -E "expo start|metro|expo run:ios" | grep -v grep
+```
+
+If more than one matches, kill the stale ones and start a fresh
+`npx expo start` for *this* checkout. Then do a true cold relaunch (Stop +
+Launch, not a Fast Refresh reload) and confirm the terminal shows a real full
+bundle line — `Bundled ...ms ... (N modules)` with N in the hundreds/
+thousands — before trusting anything. A small `(1 module)` line is a normal
+incremental request and does not by itself prove which server served the app.
+
 ```
 export PATH="$HOME/.maestro/bin:$HOME/.local/bin:$PATH"
 npm run test:e2e

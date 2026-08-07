@@ -560,7 +560,43 @@ rewrite actually needs:
   build" section and retired its stale "What to check before moving to
   Phase 2" checklist, which hadn't been touched since Phase 1 and badly
   undersold everything shipped since.
-- **Later:** store submission prep.
+- **Phase 11 — planned, not started.** Architecture foundation pass. The
+  app is feature-complete through Phase 9 but was built linearly by one
+  developer: no server-state caching layer, a single god-file data layer
+  (`lib/queries.ts`), no generated Supabase types, no error boundaries, no
+  crash/analytics visibility, and no CI/CD. None of that blocks any
+  shipped feature today, but it compounds as the app grows toward App
+  Store submission and real users — this phase closes the gap
+  proactively, the same motivation as Phase 9's performance pass. Full
+  plan, gap assessment, and code samples for all steps live in
+  `docs/superpowers/specs/2026-08-07-architecture-foundation-design.md`
+  (reviewed sequencing) and
+  `docs/superpowers/specs/lore-native-foundation-roadmap.md` (original
+  source doc). Two goals bundled together: (1) architectural
+  scalability — generated Supabase types, feature-based folders
+  (`src/features/*`), TanStack Query for server state, Zustand for client
+  state, error boundaries; (2) store-readiness — this app has never been
+  submitted, and a missing `PrivacyInfo.xcprivacy` is an automatic
+  rejection, while zero crash reporting means the first sign of a
+  production bug is a 1-star review. Sequencing deliberately reorders the
+  source document's Part 3 (which ordered by architectural layering, not
+  urgency): types → CI/CD → Sentry + Privacy Manifest → error boundaries
+  → TanStack Query POC (in place, no folder move yet) → feature-folder
+  restructure → remaining TanStack Query migration → Zustand → feature
+  flags → PostHog/ATT, with FlashList demoted out of the critical path
+  entirely (Phase 9's own profiling found no jank to fix at current
+  dev-data volume — this is scale headroom, not urgent). Rationale for
+  each reorder is in the design doc. To be worked sequentially in the
+  main session, not via subagent-driven-development (per the Phase 8
+  session-cost decision below), with `tsc`/`eslint`/relevant Maestro
+  flows re-verified after each step rather than only at the end — this
+  repo's Phase 7 and Phase 9 stale-dev-server incidents are exactly the
+  kind of regression that hides until a final check catches it too late
+  to isolate which step caused it.
+- **Phase 12 — planned, not started.** Store submission prep (Part 5/6 of
+  the same source doc): production build, TestFlight internal → external
+  beta, App Store review submission. Depends on Phase 11's store-readiness
+  work (Sentry, Privacy Manifest, CI/CD) landing first.
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
