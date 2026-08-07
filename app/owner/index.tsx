@@ -19,12 +19,17 @@ export default function OwnerDashboardScreen() {
 
   const [places, setPlaces] = useState<OwnedPlace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
       fetchOwnedPlaces(ownerId)
-        .then(setPlaces)
+        .then((data) => {
+          setPlaces(data);
+          setLoadError(false);
+        })
+        .catch(() => setLoadError(true))
         .finally(() => setLoading(false));
     }, [ownerId])
   );
@@ -44,7 +49,13 @@ export default function OwnerDashboardScreen() {
         data={places}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={<PageHeader eyebrow="Owner's Lore" title="Managing your places" />}
-        ListEmptyComponent={<Text style={styles.empty}>You don&apos;t own any places yet.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.empty}>
+            {loadError
+              ? "Couldn't load your places. Try again in a moment."
+              : "You don't own any places yet."}
+          </Text>
+        }
         renderItem={({ item }) => (
           <Card style={styles.card}>
             <Text style={styles.name}>{item.name}</Text>

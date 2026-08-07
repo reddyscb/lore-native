@@ -16,10 +16,12 @@ export default function ClaimPlaceScreen() {
   const [places, setPlaces] = useState<PlaceSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetchUnclaimedPlaces()
       .then(setPlaces)
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -62,7 +64,9 @@ export default function ClaimPlaceScreen() {
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
-            Nothing unclaimed right now — every seeded place already has an owner.
+            {loadError
+              ? "Couldn't load unclaimed places. Try again in a moment."
+              : 'Nothing unclaimed right now — every seeded place already has an owner.'}
           </Text>
         }
         renderItem={({ item }) => <PlaceListItem place={item} onPress={() => onClaim(item.id)} />}

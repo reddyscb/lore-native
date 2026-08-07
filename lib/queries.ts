@@ -105,7 +105,8 @@ export async function fetchDishes(placeId: string): Promise<Dish[]> {
     .from('dishes')
     .select('*')
     .eq('place_id', placeId)
-    .order('rating', { ascending: false })
+    .order('rating', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: true })
     .limit(100);
 
   if (error) throw error;
@@ -605,17 +606,24 @@ export async function updatePlaceStatus(
   status: string,
   reopenDate: string | null
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('places')
     .update({ status, reopen_date: status === 'temp-closed' ? reopenDate : null })
-    .eq('id', placeId);
+    .eq('id', placeId)
+    .select('id');
 
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Could not update this place — it may no longer be yours.');
+  }
 }
 
 export async function updatePlaceTagline(placeId: string, tagline: string | null): Promise<void> {
-  const { error } = await supabase.from('places').update({ tagline }).eq('id', placeId);
+  const { data, error } = await supabase.from('places').update({ tagline }).eq('id', placeId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Could not save — this place may no longer be yours.');
+  }
 }
 
 export type NewDishInput = {
@@ -647,13 +655,19 @@ export async function addDish(placeId: string, fields: NewDishInput): Promise<Di
 }
 
 export async function updateDish(dishId: string, fields: DishUpdateInput): Promise<void> {
-  const { error } = await supabase.from('dishes').update(fields).eq('id', dishId);
+  const { data, error } = await supabase.from('dishes').update(fields).eq('id', dishId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Could not save this dish.');
+  }
 }
 
 export async function deleteDish(dishId: string): Promise<void> {
-  const { error } = await supabase.from('dishes').delete().eq('id', dishId);
+  const { data, error } = await supabase.from('dishes').delete().eq('id', dishId).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Could not remove this dish.');
+  }
 }
 
 /**
