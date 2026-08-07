@@ -1,25 +1,44 @@
-# lore. — native (Phase 1: foundation)
+# lore. — native
 
 The React Native rewrite of [lore-app](https://github.com/reddyscb/lore-app),
 built for a genuinely native, smooth iOS experience. Full context for how
-this fits together lives in [`CLAUDE.md`](./CLAUDE.md) — read that first if
-you're picking this up in a new session.
+this fits together — including the phase-by-phase history below — lives in
+[`CLAUDE.md`](./CLAUDE.md); read that first if you're picking this up in a
+new session.
 
 **What's real in this build:**
 
-- Google sign-in and phone OTP, both backed by the same live Supabase Auth
-  the web app uses
+- Full auth: Google sign-in and phone OTP, both backed by the same live
+  Supabase Auth the web app uses, plus onboarding for first-time sign-ins
 - A working design system ported from the web app's cream/raspberry/mustard
   palette and Fraunces/Inter/Space Mono type system
-- Tab navigation shell (Home, Explore, Drop lore, Passport, Profile) with
-  auth-gated routing — logged-out users can't reach the tabs, and new users
-  get routed through onboarding automatically
-- A real Profile screen showing your actual `profiles` row and a working
-  sign-out
+- **Home** — a real drop feed with photo/video attachments, tagged friends,
+  and replies
+- **Explore** — search + area/price-filter café browsing
+- **Post ("Drop lore")** — a two-step compose flow (pick a place, fill in
+  the review fields, tag friends, attach up to 4 photos/videos)
+- **Café detail** — place info, go-for/skip/secret-lore fields, dish menu
+  with photos and ratings, drops with inline replies, save-to-collection,
+  and check-in
+- **Passport & Diary** — a stamp grid for places you've checked in at, and
+  a private visit log behind it
+- **Collections** — save places into named lists, organize, and browse them
+- **Events** — browse upcoming events and reserve tickets through an atomic,
+  race-safe capacity check
+- **Direct messaging** — a real-time inbox, one-on-one threads with text and
+  photo/video attachments, unread badges, and blocking
+- **Push notifications** — replies, tags, and 24-hour event reminders
+  (schema-level delivery proven; UI-level receipt needs a physical device,
+  since the iOS Simulator can't obtain a real push token)
+- **Owner dashboard** — claim an unclaimed café, manage its status/tagline,
+  and manage its dish menu (add/edit/delete, star ratings, photo upload)
+- **Profile** — your real `profiles` row, avatar upload, sign-out, and
+  entry points into most of the above
 
-**What's not built yet (next phases):** the actual home feed, café detail
-pages, drop posting, collections, owner dashboard, events/tickets, passport/
-diary, and everything Android. See the phase plan in `CLAUDE.md`.
+**What's not built yet:** Android (deliberately deferred until the iOS app
+is solid — see `CLAUDE.md`'s "What this project is" section) and App Store
+submission prep. See CLAUDE.md's phase plan for the full history of how
+each of the above shipped, including known gaps and gotchas per feature.
 
 ---
 
@@ -103,20 +122,20 @@ npx expo start
 Press `i` to open the iOS simulator, or scan the QR code with the Expo Go
 app on a physical iPhone.
 
-## What to check before moving to Phase 2
+## Regression testing
 
-- [ ] App opens to the welcome screen with the `lore.` wordmark, fonts
-      rendering correctly (Fraunces headline, Inter body)
-- [ ] Google sign-in completes and lands you in the app (or onboarding, if
-      it's your first time)
-- [ ] Phone sign-in: code arrives by SMS, verifying it signs you in
-- [ ] First-time sign-in lands on the onboarding screen; saving a name
-      takes you straight to the tabs — no manual refresh needed
-- [ ] Returning sign-in (same account, sign out then back in) skips
-      onboarding and goes straight to the tabs
-- [ ] Profile tab shows your real display name and role from Supabase
-- [ ] Sign out returns you to the welcome screen
+Don't hand-check flows one by one — `maestro/*.yaml` holds a Maestro E2E
+suite covering every feature above with a UI path Maestro can drive. Run
+the whole thing with:
 
-Once those are solid, tell me and we'll scope Phase 2 — I'd suggest the
-home feed and café detail page next, since that's the core loop, same as
-it was for the web app.
+```
+npm run test:e2e
+```
+
+This needs the Maestro CLI installed, a booted iOS Simulator with the app
+already built and a **signed-in session already present** (auth can't be
+scripted), and some specific seed data the flows reference. See CLAUDE.md's
+"Regression testing" section for the exact prerequisites, which flows are
+expected to accumulate dev data on repeat runs, and a list of known,
+already-diagnosed gotchas (keyboard/tap timing quirks, native alert
+buttons, etc.) worth reading before adding a new flow.
