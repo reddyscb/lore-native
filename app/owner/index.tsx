@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -34,6 +34,14 @@ export default function OwnerDashboardScreen() {
     }, [ownerId])
   );
 
+  const keyExtractor = useCallback((item: OwnedPlace) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: OwnedPlace }) => (
+      <OwnedPlaceRow place={item} onManage={() => router.push(`/owner/place/${item.id}`)} />
+    ),
+    [router]
+  );
+
   if (loading) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
@@ -47,7 +55,11 @@ export default function OwnerDashboardScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={places}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={<PageHeader eyebrow="Owner's Lore" title="Managing your places" />}
         ListEmptyComponent={
           <Text style={styles.empty}>
@@ -56,19 +68,7 @@ export default function OwnerDashboardScreen() {
               : "You don't own any places yet."}
           </Text>
         }
-        renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.meta}>{[item.area, item.price_range].filter(Boolean).join(' · ')}</Text>
-            <StatusBadge status={item.status} reopenDate={item.reopen_date} />
-            <Button
-              label="Manage"
-              variant="secondary"
-              inline
-              onPress={() => router.push(`/owner/place/${item.id}`)}
-            />
-          </Card>
-        )}
+        renderItem={renderItem}
         ListFooterComponent={
           <Button label="+ claim another place" variant="ghost" onPress={() => router.push('/owner/claim')} />
         }
@@ -76,6 +76,23 @@ export default function OwnerDashboardScreen() {
     </ScreenContainer>
   );
 }
+
+const OwnedPlaceRow = memo(function OwnedPlaceRow({
+  place,
+  onManage,
+}: {
+  place: OwnedPlace;
+  onManage: () => void;
+}) {
+  return (
+    <Card style={styles.card}>
+      <Text style={styles.name}>{place.name}</Text>
+      <Text style={styles.meta}>{[place.area, place.price_range].filter(Boolean).join(' · ')}</Text>
+      <StatusBadge status={place.status} reopenDate={place.reopen_date} />
+      <Button label="Manage" variant="secondary" inline onPress={onManage} />
+    </Card>
+  );
+});
 
 const styles = StyleSheet.create({
   centered: {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -25,21 +25,30 @@ export default function ClaimPlaceScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function onClaim(placeId: string) {
-    if (!userId || claimingId) return;
-    setClaimingId(placeId);
-    try {
-      await claimPlace(userId, placeId);
-      await refreshProfile();
-      router.replace('/owner');
-    } catch (error) {
-      Alert.alert(
-        'Could not claim this place',
-        error instanceof Error ? error.message : 'Something went wrong.'
-      );
-      setClaimingId(null);
-    }
-  }
+  const onClaim = useCallback(
+    async (placeId: string) => {
+      if (!userId || claimingId) return;
+      setClaimingId(placeId);
+      try {
+        await claimPlace(userId, placeId);
+        await refreshProfile();
+        router.replace('/owner');
+      } catch (error) {
+        Alert.alert(
+          'Could not claim this place',
+          error instanceof Error ? error.message : 'Something went wrong.'
+        );
+        setClaimingId(null);
+      }
+    },
+    [userId, claimingId, refreshProfile, router]
+  );
+
+  const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: PlaceSummary }) => <PlaceListItem place={item} onPress={() => onClaim(item.id)} />,
+    [onClaim]
+  );
 
   if (loading) {
     return (
@@ -54,7 +63,11 @@ export default function ClaimPlaceScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={places}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <PageHeader
             eyebrow="Claim your place"
@@ -69,7 +82,7 @@ export default function ClaimPlaceScreen() {
               : 'Nothing unclaimed right now — every seeded place already has an owner.'}
           </Text>
         }
-        renderItem={({ item }) => <PlaceListItem place={item} onPress={() => onClaim(item.id)} />}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
