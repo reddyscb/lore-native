@@ -22,13 +22,11 @@ import { MediaStrip } from '@/components/ui/MediaStrip';
 import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
+import { useCreateDrop } from '@/hooks/use-create-drop';
 import {
-  createDrop,
   fetchPlace,
   searchPlaces,
   searchProfiles,
-  tagProfilesOnDrop,
-  uploadDropMedia,
   type PickedMedia,
   type PlaceSummary,
   type ProfileSearchResult,
@@ -140,7 +138,7 @@ function ComposeForm({
   const [friendResults, setFriendResults] = useState<ProfileSearchResult[]>([]);
   const [taggedFriends, setTaggedFriends] = useState<ProfileSearchResult[]>([]);
   const [media, setMedia] = useState<PickedMediaItem[]>([]);
-  const [submitting, setSubmitting] = useState(false);
+  const createDropMutation = useCreateDrop();
 
   async function pickMedia() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -202,26 +200,22 @@ function ComposeForm({
 
   async function onSubmit() {
     if (!authorId) return;
-    setSubmitting(true);
     try {
-      const { id: dropId } = await createDrop({
-        place_id: place.id,
-        author_id: authorId,
-        must_order: fields.must_order.trim() || undefined,
-        skip_note: fields.skip_note.trim() || undefined,
-        sweet_spot: fields.sweet_spot.trim() || undefined,
-        damage: fields.damage.trim() ? Number(fields.damage.trim()) : undefined,
-        vibe_check: fields.vibe_check.trim() || undefined,
-        plot_twist: fields.plot_twist.trim() || undefined,
-        secret_lore: fields.secret_lore.trim() || undefined,
+      await createDropMutation.mutateAsync({
+        input: {
+          place_id: place.id,
+          author_id: authorId,
+          must_order: fields.must_order.trim() || undefined,
+          skip_note: fields.skip_note.trim() || undefined,
+          sweet_spot: fields.sweet_spot.trim() || undefined,
+          damage: fields.damage.trim() ? Number(fields.damage.trim()) : undefined,
+          vibe_check: fields.vibe_check.trim() || undefined,
+          plot_twist: fields.plot_twist.trim() || undefined,
+          secret_lore: fields.secret_lore.trim() || undefined,
+        },
+        taggedProfileIds: taggedFriends.map((f) => f.id),
+        media,
       });
-
-      await tagProfilesOnDrop(
-        dropId,
-        taggedFriends.map((f) => f.id)
-      );
-
-      await uploadDropMedia(dropId, media);
 
       setFields(EMPTY_FORM);
       setTaggedFriends([]);
@@ -229,8 +223,6 @@ function ComposeForm({
       router.push(`/place/${place.id}`);
     } catch (error) {
       Alert.alert('Could not post', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -347,10 +339,10 @@ function ComposeForm({
           )}
 
           <Button
-            label={submitting ? 'Posting…' : 'Post drop'}
+            label={createDropMutation.isPending ? 'Posting…' : 'Post drop'}
             onPress={onSubmit}
             disabled={!hasContent}
-            loading={submitting}
+            loading={createDropMutation.isPending}
           />
         </ScrollView>
       </KeyboardAvoidingView>

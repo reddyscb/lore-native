@@ -7,6 +7,7 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import AuthProvider from '@/providers/auth-provider';
+import QueryProvider from '@/providers/query-provider';
 import { colors, fontFamily } from '@/constants/theme';
 
 // Sentry.init must always run (not just when a DSN is set) — Sentry.wrap
@@ -82,11 +83,13 @@ function RootLayout() {
   const fontsLoaded = useAppFonts();
 
   return (
-    <AuthProvider>
-      <SplashScreenController fontsLoaded={fontsLoaded} />
-      {fontsLoaded && <RootNavigator />}
-      <StatusBar style="dark" />
-    </AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <SplashScreenController fontsLoaded={fontsLoaded} />
+        {fontsLoaded && <RootNavigator />}
+        <StatusBar style="dark" />
+      </AuthProvider>
+    </QueryProvider>
   );
 }
 

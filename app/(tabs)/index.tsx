@@ -13,35 +13,33 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { DropCard } from '@/components/ui/DropCard';
 import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
-import { fetchDropFeed, type Drop } from '@/lib/queries';
+import { useDropFeed } from '@/hooks/use-drop-feed';
+import type { Drop } from '@/lib/queries';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: drops = [], isLoading, refetch } = useDropFeed();
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    const data = await fetchDropFeed();
-    setDrops(data);
-  }, []);
-
   // Re-read on focus (not just on mount) so a drop posted elsewhere shows up
-  // when you come back to Home — `loading` only ever gates the very first
+  // when you come back to Home — `isLoading` only ever gates the very first
   // load, so later focuses refresh in the background without a spinner.
+  // (Deliberately not driven by the query's own isRefetching — that would
+  // also flip true on this focus-triggered background refetch and pop the
+  // pull-to-refresh spinner on every tab visit, not just an explicit pull.)
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
-    }, [load])
+      refetch();
+    }, [refetch])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await refetch();
     setRefreshing(false);
-  }, [load]);
+  }, [refetch]);
 
   const keyExtractor = useCallback((item: Drop) => item.id, []);
   const renderItem = useCallback(
@@ -51,7 +49,7 @@ export default function HomeScreen() {
     []
   );
 
-  if (loading) {
+  if (isLoading) {
     return (
       <ScreenContainer style={styles.centered}>
         <ActivityIndicator color={colors.raspberry} />
