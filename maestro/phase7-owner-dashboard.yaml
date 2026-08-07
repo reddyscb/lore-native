@@ -65,8 +65,14 @@ appId: com.reddyscb.lore
     timeout: 8000
 - tapOn: "Add a dish…"
 - inputText: "Maestro regression dish"
+# Enter already submits via the field's onSubmitEditing (RN's default
+# blurOnSubmit, same single-line-field pattern used above for the
+# reopen-date field) — a follow-up tapOn "Add" is not just redundant,
+# it's unreliable: the new DishRow renders above the add-dish form,
+# pushing the "Add" button below the last scroll position, so Maestro
+# can't find it. Confirmed by running this flow against a real
+# Simulator — the dish was already added before the tap failed.
 - pressKey: Enter
-- tapOn: "Add"
 - extendedWaitUntil:
     visible: ".*Maestro regression dish.*"
     timeout: 8000
@@ -75,5 +81,21 @@ appId: com.reddyscb.lore
     direction: DOWN
     timeout: 8000
 - tapOn: "remove"
-- tapOn: "Remove"
-- assertNotVisible: ".*Maestro regression dish.*"
+# The destructive confirm button lives in a native UIAlertController
+# (Alert.alert), not the RN view tree. Confirmed by direct comparison on
+# a real Simulator: `tapOn: "Remove"` (text match) never dismisses this
+# specific alert — Maestro reports the tap COMPLETED but the dialog stays
+# on screen — while a coordinate tap at the same button lands correctly.
+# Tapping by point (centered in the button, as a % of screen so it's
+# resolution-independent) is the reliable way to hit a native alert
+# button here.
+- tapOn:
+    point: "68%,56%"
+# deleteDish is a real network round-trip before local state updates and
+# the native Alert dismiss animation completes — a bare assertNotVisible
+# right after the tap ran ahead of both. extendedWaitUntil gives it room,
+# same fix pattern this file already uses for the async status update
+# above.
+- extendedWaitUntil:
+    notVisible: ".*Maestro regression dish.*"
+    timeout: 8000
