@@ -463,8 +463,104 @@ rewrite actually needs:
   user request partway through the session to reduce session-usage cost,
   worth knowing if a future session picks up a similar-sized task list in
   this repo and the user raises the same concern.
-- **Later:** a dedicated polish pass (list virtualization, image caching,
-  transition tuning), then store submission prep.
+- **Phase 9 — done, verified end-to-end** (`npx tsc --noEmit` and
+  `npx eslint . --ext .ts,.tsx` clean project-wide; `npm run test:e2e`
+  9/12 green, matching Phase 8's own count — see below). A proactive
+  performance polish pass: list virtualization, image caching, and
+  navigation-transition tuning, done as a review of already-shipped code
+  rather than a response to any known lag complaint. Every list screen
+  but `app/events.tsx` already used `FlatList` and every image already
+  used `expo-image` going in — the actual gaps closed here were narrower
+  than the phase name suggests:
+  - `React.memo` on every list row component (`DropCard`, `PlaceListItem`,
+    `ReplyRow`, plus newly-extracted local ones — `CollectionRow`,
+    `OwnedPlaceRow`, `ConversationRow`, `PersonRow`, `EventCard` — and
+    `MessageBubble` in the messages thread), `useCallback`-stabilized
+    `renderItem`/`keyExtractor` (and any handler they close over) on
+    every `FlatList` in the app, plus consistent tuning props
+    (`initialNumToRender={8}`, `maxToRenderPerBatch={8}`, `windowSize={7}`,
+    `removeClippedSubviews`) — applied uniformly across Home, Explore,
+    Passport, Diary, Collections (index + detail), Owner dashboard
+    (index + claim), Messages (inbox + new + thread), and Events.
+  - `app/events.tsx` converted from a `ScrollView` + `.map()` list (the
+    one screen that wasn't already virtualized) to a `FlatList`, with the
+    header/banner/tickets section moved into `ListHeaderComponent`.
+  - `expo-image` usages (`Avatar`, `MediaStrip`, café-detail and
+    owner-manage dish photos) gained an explicit `cachePolicy=
+    "memory-disk"`; `Avatar` and `MediaStrip` (the two rendered inside
+    scrolling lists) also gained a `recyclingKey` to prevent a recycled
+    row briefly showing the previous row's image.
+  - `app/_layout.tsx`'s shared `pushedScreenOptions` gained
+    `freezeOnBlur: true` (a `react-native-screens` option that pauses a
+    pushed screen's React tree once fully covered by the next screen) —
+    manually verified (push into café detail → push into check-in → pop
+    twice) to not lose in-flight screen state. A modal-presentation
+    change for check-in was considered and explicitly rejected: no
+    measurable performance upside, and it would touch the exact
+    back-navigation pattern this file's Maestro gotchas section already
+    flags as fragile.
+  **Profiling (Tasks 1 and 11 of the plan) found no jank to fix at the
+  current dev-data volume** — Home, café detail, Explore, and the
+  messages thread were all already at a clean 60fps ceiling on both the
+  JS and UI threads before this phase's changes, and stayed there after.
+  `xcrun xctrace` (Time Profiler) was attempted for CPU-level profiling
+  and dropped entirely: it hung indefinitely (12+ minutes on a 3-second
+  recording request, no error) almost certainly waiting on a one-time
+  developer-tools authorization dialog with no way to answer it
+  non-interactively — RN's in-app Perf Monitor overlay (Simulator →
+  Device menu → Shake → "Show Perf Monitor") plus scripted `idb ui swipe`
+  gestures was the only profiling method that actually worked in this
+  environment. Full before/after numbers, screenshots, and an honest
+  write-up (including the caveat below) live in
+  `docs/superpowers/plans/phase9-profiling/`. This phase's real value
+  isn't a measured speedup — the seed data (a handful of drops/places/
+  messages) is too small to produce a dropped frame regardless of
+  `FlatList` tuning — it's scalability headroom (memoized rows won't
+  cascade-re-render once real usage grows list sizes) and image-caching
+  behavior that doesn't show up in an FPS number at all.
+  **A second instance of the Phase 7-documented "stale dev server"
+  gotcha, worse this time:** running the Maestro suite for this phase's
+  own Task 12 verification, all 12 flows failed identically at the very
+  first launch assertion with a red `ConfigError` screen. Cause: a
+  leftover `expo run:ios` process from an unrelated, already-deleted git
+  worktree (`.claude/worktrees/dm-feature`, started hours earlier by a
+  different session) was still holding the installed dev client's
+  bundler connection — Phase 7's "point at the wrong-but-working server"
+  failure mode, except this time the stale server's own project no
+  longer existed, so *every* request to it errored instead of silently
+  serving old code. Worse: because the failure only surfaces on a true
+  cold relaunch (`Stop` + `Launch`, not a Fast Refresh–preserved reload),
+  **all of this phase's manual smoke-testing and the Task 1/Task 11
+  profiling captures earlier in the same session were of uncertain
+  provenance** — they may have been served by that same stale process the
+  whole time. Fixed by killing every stray `expo`/`metro` process,
+  starting a fresh `npx expo start` for this actual checkout, and
+  confirming a real full bundle log
+  (`Bundled 3178ms node_modules/expo-router/entry.js (1505 modules)`)
+  before trusting anything again — then re-running the full Maestro suite
+  and redoing the Task 11 profiling captures against the verified-correct
+  server (documented in `docs/superpowers/plans/phase9-profiling/
+  before/README.md` and `comparison.md` rather than silently
+  overwritten). The practical lesson beyond Phase 7's own: a stale-server
+  hijack isn't always obviously wrong-looking — this one only announced
+  itself on a full cold relaunch, so a session that never does one (e.g.
+  one that only uses Fast Refresh + manual spot-checks, as most of this
+  phase's own early tasks did) can go a long time without noticing.
+  `npm run test:e2e` against the verified-correct server: 9/12 green, the
+  same count as Phase 8's own run and for the same kind of reasons —
+  `phase4-events` failed on an accumulated "Your tickets" list pushing
+  the reserve Stepper off-screen (dev-data accumulation, the same known
+  class CLAUDE.md's "Regression testing" section already describes, just
+  a new symptom of it), `phase7-owner-dashboard` failed because the test
+  account's `profiles.role` was already flipped to `'owner'` from an
+  earlier run this session (the exact documented pre-existing gap), and
+  `phase8-messages` hit the already-documented QuickType-predictive-bar
+  Send-tap flake. None of the three is a regression from this phase's
+  changes. Also refreshed `README.md`'s Phase-1-era "What's real in this
+  build" section and retired its stale "What to check before moving to
+  Phase 2" checklist, which hadn't been touched since Phase 1 and badly
+  undersold everything shipped since.
+- **Later:** store submission prep.
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
