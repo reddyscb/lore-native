@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -27,6 +27,14 @@ export default function MessagesInboxScreen() {
     }, [])
   );
 
+  const keyExtractor = useCallback((item: Conversation) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: Conversation }) => (
+      <ConversationRow conversation={item} onPress={() => router.push(`/messages/${item.id}`)} />
+    ),
+    [router]
+  );
+
   if (loading) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
@@ -40,7 +48,11 @@ export default function MessagesInboxScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={conversations}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <View style={styles.headerRow}>
             <View style={styles.headerText}>
@@ -56,32 +68,42 @@ export default function MessagesInboxScreen() {
               : 'No conversations yet — tap "New" to message someone.'}
           </Text>
         }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/messages/${item.id}`)}>
-            <Card style={styles.card}>
-              <View style={styles.row}>
-                <Avatar
-                  uri={item.other_participant.avatar_url}
-                  name={item.other_participant.display_name}
-                  size={44}
-                />
-                <View style={styles.textCol}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.name}>{item.other_participant.display_name ?? 'Someone'}</Text>
-                    {item.unread && <View style={styles.unreadDot} />}
-                  </View>
-                  <Text style={styles.preview} numberOfLines={1}>
-                    {previewText(item)}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-          </Pressable>
-        )}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
 }
+
+const ConversationRow = memo(function ConversationRow({
+  conversation,
+  onPress,
+}: {
+  conversation: Conversation;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      <Card style={styles.card}>
+        <View style={styles.row}>
+          <Avatar
+            uri={conversation.other_participant.avatar_url}
+            name={conversation.other_participant.display_name}
+            size={44}
+          />
+          <View style={styles.textCol}>
+            <View style={styles.nameRow}>
+              <Text style={styles.name}>{conversation.other_participant.display_name ?? 'Someone'}</Text>
+              {conversation.unread && <View style={styles.unreadDot} />}
+            </View>
+            <Text style={styles.preview} numberOfLines={1}>
+              {previewText(conversation)}
+            </Text>
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+});
 
 function previewText(conversation: Conversation): string {
   const message = conversation.last_message;

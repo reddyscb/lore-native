@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -151,24 +151,39 @@ export default function ConversationScreen() {
     }
   }
 
-  function onLongPressMessage(message: Message) {
-    if (message.sender_id !== selfId) return;
-    Alert.alert('Delete this message?', undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteMessage(message.id);
-            setMessages((prev) => prev.filter((m) => m.id !== message.id));
-          } catch (error) {
-            Alert.alert('Could not delete', error instanceof Error ? error.message : 'Something went wrong.');
-          }
+  const onLongPressMessage = useCallback(
+    (message: Message) => {
+      if (message.sender_id !== selfId) return;
+      Alert.alert('Delete this message?', undefined, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMessage(message.id);
+              setMessages((prev) => prev.filter((m) => m.id !== message.id));
+            } catch (error) {
+              Alert.alert('Could not delete', error instanceof Error ? error.message : 'Something went wrong.');
+            }
+          },
         },
-      },
-    ]);
-  }
+      ]);
+    },
+    [selfId]
+  );
+
+  const keyExtractor = useCallback((item: Message) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: Message }) => (
+      <MessageBubble
+        message={item}
+        isSelf={item.sender_id === selfId}
+        onLongPress={() => onLongPressMessage(item)}
+      />
+    ),
+    [selfId, onLongPressMessage]
+  );
 
   function onBlock() {
     if (!conversation || !selfId) return;
@@ -221,16 +236,14 @@ export default function ConversationScreen() {
           style={styles.flex}
           contentContainerStyle={styles.list}
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-          renderItem={({ item }) => (
-            <MessageBubble
-              message={item}
-              isSelf={item.sender_id === selfId}
-              onLongPress={() => onLongPressMessage(item)}
-            />
-          )}
+          renderItem={renderItem}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews
         />
 
         <View style={styles.composer}>
@@ -257,7 +270,7 @@ export default function ConversationScreen() {
   );
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   message,
   isSelf,
   onLongPress,
@@ -279,7 +292,7 @@ export function MessageBubble({
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   centered: { alignItems: 'center', justifyContent: 'center' },

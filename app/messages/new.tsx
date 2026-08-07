@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -30,27 +30,42 @@ export default function NewMessageScreen() {
     return () => clearTimeout(timeout);
   }, [query, selfId]);
 
-  async function onSelect(otherUserId: string) {
-    if (startingId) return;
-    setStartingId(otherUserId);
-    try {
-      const conversationId = await getOrCreateDirectConversation(otherUserId);
-      // replace, not push: backing out of a freshly started thread should
-      // return to the inbox, not back to this search screen.
-      router.replace(`/messages/${conversationId}`);
-    } catch (error) {
-      Alert.alert('Could not start conversation', error instanceof Error ? error.message : 'Something went wrong.');
-      setStartingId(null);
-    }
-  }
+  const onSelect = useCallback(
+    async (otherUserId: string) => {
+      if (startingId) return;
+      setStartingId(otherUserId);
+      try {
+        const conversationId = await getOrCreateDirectConversation(otherUserId);
+        // replace, not push: backing out of a freshly started thread should
+        // return to the inbox, not back to this search screen.
+        router.replace(`/messages/${conversationId}`);
+      } catch (error) {
+        Alert.alert('Could not start conversation', error instanceof Error ? error.message : 'Something went wrong.');
+        setStartingId(null);
+      }
+    },
+    [startingId, router]
+  );
+
+  const keyExtractor = useCallback((item: ProfileSearchResult) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: ProfileSearchResult }) => (
+      <PersonRow person={item} starting={startingId === item.id} onPress={() => onSelect(item.id)} />
+    ),
+    [startingId, onSelect]
+  );
 
   return (
     <ScreenContainer hasHeader padded={false}>
       <FlatList
         contentContainerStyle={styles.list}
         data={results}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <>
             <PageHeader eyebrow="New message" title="Who's the lore for?" />
@@ -63,17 +78,29 @@ export default function NewMessageScreen() {
           </>
         }
         ListEmptyComponent={query.trim() ? <Text style={styles.empty}>No one matches that name.</Text> : null}
-        renderItem={({ item }) => (
-          <Pressable style={styles.row} onPress={() => onSelect(item.id)} disabled={startingId === item.id}>
-            <Avatar uri={item.avatar_url} name={item.display_name} size={44} />
-            <Text style={styles.name}>{item.display_name ?? 'Someone'}</Text>
-            {startingId === item.id && <ActivityIndicator color={colors.raspberry} style={styles.spinner} />}
-          </Pressable>
-        )}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
 }
+
+const PersonRow = memo(function PersonRow({
+  person,
+  starting,
+  onPress,
+}: {
+  person: ProfileSearchResult;
+  starting: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={styles.row} onPress={onPress} disabled={starting}>
+      <Avatar uri={person.avatar_url} name={person.display_name} size={44} />
+      <Text style={styles.name}>{person.display_name ?? 'Someone'}</Text>
+      {starting && <ActivityIndicator color={colors.raspberry} style={styles.spinner} />}
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
