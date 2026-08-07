@@ -13,11 +13,16 @@ export default function MessagesInboxScreen() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       fetchConversations()
-        .then(setConversations)
+        .then((data) => {
+          setConversations(data);
+          setLoadError(false);
+        })
+        .catch(() => setLoadError(true))
         .finally(() => setLoading(false));
     }, [])
   );
@@ -45,7 +50,11 @@ export default function MessagesInboxScreen() {
           </View>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>No conversations yet — tap &quot;New&quot; to message someone.</Text>
+          <Text style={styles.empty}>
+            {loadError
+              ? "Couldn't load your conversations. Try again in a moment."
+              : 'No conversations yet — tap "New" to message someone.'}
+          </Text>
         }
         renderItem={({ item }) => (
           <Pressable onPress={() => router.push(`/messages/${item.id}`)}>
