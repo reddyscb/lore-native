@@ -1,0 +1,77 @@
+appId: com.reddyscb.lore
+---
+# Covers the owner dashboard write path: claim an unclaimed place -> land
+# on the owner dashboard -> update its status -> add a dish -> remove it.
+#
+# Assumes seed data: an unclaimed place named "Maestro Claim Test Café" (no owner_id),
+# reserved for this flow only. Assumes a signed-in session already exists
+# in the simulator.
+#
+# Note: tab bar items expose composite accessibility labels, so selectors
+# below use .*wildcards.* rather than exact text — Maestro's text matcher
+# is anchored, not substring.
+#
+# Important: there is no "unclaim" feature (by design — see
+# docs/superpowers/specs/2026-08-06-owner-dashboard-design.md), so this
+# flow is only re-runnable from a clean state. Before re-running, reset
+# both sides of the claim:
+#   update places set owner_id = null, status = 'open', reopen_date = null
+#     where id = '80a63bec-6542-41bc-b96c-acdb6ad524c3';
+#   update profiles set role = 'seeker' where id = '<test account's id>';
+# Without that reset, the Profile button will already read "Owner
+# dashboard" instead of "Claim a place" and this flow's early steps won't
+# find what they're looking for.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: ".*Profile.*"
+    timeout: 8000
+- tapOn: ".*Profile.*"
+- extendedWaitUntil:
+    visible: ".*Claim a place.*"
+    timeout: 10000
+- tapOn: ".*Claim a place.*"
+- extendedWaitUntil:
+    visible: "Find your café"
+    timeout: 10000
+- tapOn: "Maestro Claim Test Café"
+- extendedWaitUntil:
+    visible: "Managing your places"
+    timeout: 10000
+- assertVisible: "Maestro Claim Test Café"
+- tapOn: "Manage"
+- extendedWaitUntil:
+    visible: "Maestro Claim Test Café"
+    timeout: 10000
+- tapOn: "Temporarily closed"
+- tapOn: "Expected back (e.g. 25 Jul)"
+- inputText: "Maestro test date"
+# Single-line field (no `multiline` prop) — pressKey Enter blurs it via
+# RN's default blurOnSubmit, same fix CLAUDE.md documents for single-line
+# fields. No need for the "tap inert Text" workaround multiline fields need.
+- pressKey: Enter
+- tapOn: "Update status"
+- extendedWaitUntil:
+    visible: ".*Status updated.*"
+    timeout: 8000
+- scrollUntilVisible:
+    element: "Add a dish…"
+    direction: DOWN
+    timeout: 8000
+- tapOn: "Add a dish…"
+- inputText: "Maestro regression dish"
+- pressKey: Enter
+- tapOn: "Add"
+- extendedWaitUntil:
+    visible: ".*Maestro regression dish.*"
+    timeout: 8000
+- scrollUntilVisible:
+    element: ".*Maestro regression dish.*"
+    direction: DOWN
+    timeout: 8000
+- tapOn: "remove"
+- tapOn: "Remove"
+- assertNotVisible: ".*Maestro regression dish.*"
