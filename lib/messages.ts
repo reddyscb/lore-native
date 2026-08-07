@@ -154,7 +154,11 @@ export async function sendMessageMedia(
     .from('message-media')
     .upload(path, arraybuffer, { contentType: media.mimeType, upsert: true });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    // Partial failure: clean up the orphaned row so it doesn't appear as a blank message to the other participant.
+    await supabase.from('messages').delete().eq('id', message.id);
+    throw uploadError;
+  }
 
   const { data: updated, error: updateError } = await supabase
     .from('messages')
@@ -163,7 +167,11 @@ export async function sendMessageMedia(
     .select('*')
     .single();
 
-  if (updateError) throw updateError;
+  if (updateError) {
+    // Partial failure: clean up the orphaned row so it doesn't appear as a blank message to the other participant.
+    await supabase.from('messages').delete().eq('id', message.id);
+    throw updateError;
+  }
 
   const [withUrl] = await resolveMessageMediaUrls([updated as Message]);
   return withUrl;
