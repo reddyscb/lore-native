@@ -7,6 +7,8 @@ import { PlaceListItem } from '@/components/ui/PlaceListItem';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { fetchCollection, type Collection, type PlaceSummary } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function CollectionDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();

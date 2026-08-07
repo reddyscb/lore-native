@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { signInWithGoogle } from '@/lib/oauth';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function WelcomeScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
 

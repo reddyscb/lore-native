@@ -8,6 +8,8 @@ import { TextField } from '@/components/ui/TextField';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function PhoneScreen() {
   const [phone, setPhone] = useState(''); // E.164, e.g. +919876543210
   const [loading, setLoading] = useState(false);

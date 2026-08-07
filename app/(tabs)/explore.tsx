@@ -9,6 +9,8 @@ import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { searchPlaces, type PlaceSummary } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 const PRICE_RANGES = ['₹', '₹₹', '₹₹₹'];
 
 export default function ExploreScreen() {

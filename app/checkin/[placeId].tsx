@@ -17,6 +17,8 @@ import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { createDiaryEntry, fetchPlace, type Place } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function CheckInScreen() {
   const router = useRouter();
   const { placeId } = useLocalSearchParams<{ placeId: string }>();

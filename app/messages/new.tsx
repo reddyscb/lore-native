@@ -10,6 +10,8 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { searchProfiles, type ProfileSearchResult } from '@/lib/queries';
 import { getOrCreateDirectConversation } from '@/lib/messages';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function NewMessageScreen() {
   const router = useRouter();
   const { profile, session } = useAuthContext();

@@ -8,6 +8,8 @@ import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchUnclaimedPlaces, claimPlace, type PlaceSummary } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function ClaimPlaceScreen() {
   const router = useRouter();
   const { profile, session, refreshProfile } = useAuthContext();

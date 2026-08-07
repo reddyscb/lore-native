@@ -12,6 +12,8 @@ import { useAuthContext } from '@/hooks/use-auth-context';
 import { supabase } from '@/lib/supabase';
 import { updateAvatar } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile, session, refreshProfile } = useAuthContext();

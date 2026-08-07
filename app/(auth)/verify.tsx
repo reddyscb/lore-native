@@ -8,6 +8,8 @@ import { OtpInput } from '@/components/ui/OtpInput';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function VerifyScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
   const [code, setCode] = useState('');

@@ -9,6 +9,8 @@ import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/hooks/use-auth-context';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 type Role = 'seeker' | 'owner';
 
 export default function OnboardingScreen() {

@@ -34,6 +34,8 @@ import {
   type ProfileSearchResult,
 } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 const MAX_DROP_MEDIA = 4;
 
 type PickedMediaItem = PickedMedia & { id: string };

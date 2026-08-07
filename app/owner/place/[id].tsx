@@ -33,6 +33,8 @@ import {
   type Dish,
 } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 const STATUSES: { id: string; label: string }[] = [
   { id: 'open', label: 'Open as usual' },
   { id: 'temp-closed', label: 'Temporarily closed' },

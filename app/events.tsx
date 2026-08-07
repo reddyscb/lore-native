@@ -10,6 +10,8 @@ import { formatEventDate } from '@/lib/format';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchEvents, fetchMyTickets, reserveTickets, type EventRow, type Ticket } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 type Banner = { kind: 'reserved' | 'sold-out' } | null;
 
 export default function EventsScreen() {

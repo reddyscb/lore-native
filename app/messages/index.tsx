@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { fetchConversations, type Conversation } from '@/lib/messages';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function MessagesInboxScreen() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);

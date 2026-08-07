@@ -10,6 +10,8 @@ import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchOwnedPlaces, type Place, type Dish } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 type OwnedPlace = Place & { dishes: Dish[] };
 
 export default function OwnerDashboardScreen() {

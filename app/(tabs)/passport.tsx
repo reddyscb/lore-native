@@ -18,6 +18,8 @@ import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/con
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchStampedPlaceIds, searchPlaces, type PlaceSummary } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 export default function PassportScreen() {
   const router = useRouter();
   const { profile, session } = useAuthContext();

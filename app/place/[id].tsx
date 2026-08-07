@@ -35,6 +35,8 @@ import {
   type Collection,
 } from '@/lib/queries';
 
+export { RouteErrorBoundary as ErrorBoundary } from '@/components/ui/RouteErrorBoundary';
+
 const LORE_FIELDS: { key: keyof Place; label: string }[] = [
   { key: 'go_for', label: 'Go for' },
   { key: 'skip_note', label: 'Skip' },
