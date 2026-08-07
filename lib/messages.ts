@@ -108,11 +108,12 @@ export async function fetchMessages(conversationId: string): Promise<Message[]> 
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(200);
 
   if (error) throw error;
-  return resolveMessageMediaUrls((data ?? []) as Message[]);
+  const chronological = ((data ?? []) as Message[]).reverse();
+  return resolveMessageMediaUrls(chronological);
 }
 
 export async function sendMessage(conversationId: string, senderId: string, body: string): Promise<Message> {
