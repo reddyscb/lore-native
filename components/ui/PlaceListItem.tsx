@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from './Card';
 import { StatusBadge } from './StatusBadge';
@@ -9,7 +10,7 @@ type Props = {
   onPress: () => void;
 };
 
-export function PlaceListItem({ place, onPress }: Props) {
+export const PlaceListItem = memo(function PlaceListItem({ place, onPress }: Props) {
   return (
     <Pressable onPress={onPress}>
       <Card style={styles.card}>
@@ -30,7 +31,7 @@ export function PlaceListItem({ place, onPress }: Props) {
       </Card>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

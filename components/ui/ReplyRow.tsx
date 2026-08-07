@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from './Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
@@ -8,7 +9,7 @@ type Props = {
   reply: DropReply;
 };
 
-export function ReplyRow({ reply }: Props) {
+export const ReplyRow = memo(function ReplyRow({ reply }: Props) {
   return (
     <View style={styles.row}>
       <Avatar uri={reply.profiles?.avatar_url} name={reply.profiles?.display_name} size={22} />
@@ -21,7 +22,7 @@ export function ReplyRow({ reply }: Props) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: {

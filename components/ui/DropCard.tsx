@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,7 @@ const FIELDS: { key: keyof Drop; label: string }[] = [
   { key: 'secret_lore', label: 'Secret lore' },
 ];
 
-export function DropCard({ drop, place }: Props) {
+export const DropCard = memo(function DropCard({ drop, place }: Props) {
   const router = useRouter();
 
   return (
@@ -80,7 +81,7 @@ export function DropCard({ drop, place }: Props) {
       )}
     </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
