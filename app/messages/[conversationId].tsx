@@ -218,6 +218,7 @@ export default function ConversationScreen() {
 
         <FlatList
           ref={listRef}
+          style={styles.flex}
           contentContainerStyle={styles.list}
           data={messages}
           keyExtractor={(item) => item.id}
