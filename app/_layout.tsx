@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
@@ -7,6 +8,23 @@ import { useAppFonts } from '@/hooks/use-app-fonts';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import AuthProvider from '@/providers/auth-provider';
 import { colors, fontFamily } from '@/constants/theme';
+
+// Sentry.init must always run (not just when a DSN is set) — Sentry.wrap
+// below expects an initialized client and logs a startup warning
+// otherwise. An empty dsn is Sentry's own supported way to disable
+// sending; see CLAUDE.md's "Required manual setup" for the DSN itself
+// (create a Sentry project, add it to .env's EXPO_PUBLIC_SENTRY_DSN).
+// debug is gated on the DSN too — with nothing to send to, Sentry's own
+// internal logger just console.warns about it on every launch, which
+// (like the expo-notifications warning documented in hooks/use-push-
+// notifications.ts) surfaces RN's "Open debugger to view warnings" banner
+// over the UI.
+const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
+Sentry.init({
+  dsn: sentryDsn,
+  debug: __DEV__ && Boolean(sentryDsn),
+  tracesSampleRate: 0.1,
+});
 
 // Three mutually-exclusive states, each its own protected branch:
 //  1. logged out              -> (auth) welcome / phone / verify
@@ -60,7 +78,7 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const fontsLoaded = useAppFonts();
 
   return (
@@ -71,3 +89,5 @@ export default function RootLayout() {
     </AuthProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

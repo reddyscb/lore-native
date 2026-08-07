@@ -121,6 +121,15 @@ Before Google sign-in will work on a real device:
 2. Phone OTP needs no new setup — it reuses the Twilio Verify config
    already on the Supabase project.
 
+Before crash reports will actually reach anyone (Phase 11 Step 3):
+
+3. Create a project at [sentry.io](https://sentry.io), then paste its DSN
+   into `.env`'s `EXPO_PUBLIC_SENTRY_DSN`. `Sentry.init()` in
+   `app/_layout.tsx` always runs (`Sentry.wrap` needs an initialized
+   client or it logs its own startup warning), but an empty/missing `dsn`
+   is Sentry's own supported way to disable sending — so no code change
+   is needed once the DSN exists, just the `.env` value.
+
 ## Phase plan (native rewrite)
 
 Mirrors the web app's phases conceptually, but re-scoped for what a native
