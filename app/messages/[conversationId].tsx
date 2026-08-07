@@ -56,7 +56,9 @@ export default function ConversationScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
+      load()
+        .catch((error) => console.log('Failed to load conversation:', error))
+        .finally(() => setLoading(false));
       if (conversationId && selfId) {
         markConversationRead(conversationId, selfId).catch((error) =>
           console.log('Failed to mark conversation read:', error)
@@ -71,7 +73,9 @@ export default function ConversationScreen() {
   // caught up but silently isn't.
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') load();
+      if (state === 'active') {
+        load().catch((error) => console.log('Failed to load conversation:', error));
+      }
     });
     return () => subscription.remove();
   }, [load]);
@@ -92,8 +96,10 @@ export default function ConversationScreen() {
     setDraft('');
     try {
       const sent = await sendMessage(conversationId, selfId, body);
-      seenIds.current.add(sent.id);
-      setMessages((prev) => [...prev, sent]);
+      if (!seenIds.current.has(sent.id)) {
+        seenIds.current.add(sent.id);
+        setMessages((prev) => [...prev, sent]);
+      }
     } catch (error) {
       Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
       setDraft(body);
@@ -172,6 +178,7 @@ export default function ConversationScreen() {
           contentContainerStyle={styles.list}
           data={messages}
           keyExtractor={(item) => item.id}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           renderItem={({ item }) => (
             <MessageBubble
