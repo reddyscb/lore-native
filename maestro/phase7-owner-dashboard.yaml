@@ -37,12 +37,14 @@ appId: com.reddyscb.lore
 - extendedWaitUntil:
     visible: "Find your café"
     timeout: 10000
-- tapOn: "Maestro Claim Test Café"
+- tapOn: ".*Maestro Claim Test Café.*"
 - extendedWaitUntil:
     visible: "Managing your places"
     timeout: 10000
 - assertVisible: "Maestro Claim Test Café"
-- tapOn: "Manage"
+- tapOn:
+    text: "Manage"
+    below: ".*Maestro Claim Test Café.*"
 - extendedWaitUntil:
     visible: "Maestro Claim Test Café"
     timeout: 10000
