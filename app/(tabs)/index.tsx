@@ -41,6 +41,14 @@ export default function HomeScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const keyExtractor = useCallback((item: Drop) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: Drop }) => (
+      <DropCard drop={item} place={item.places ? { id: item.place_id, ...item.places } : undefined} />
+    ),
+    []
+  );
+
   if (loading) {
     return (
       <ScreenContainer style={styles.centered}>
@@ -54,10 +62,12 @@ export default function HomeScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={drops}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <DropCard drop={item} place={item.places ? { id: item.place_id, ...item.places } : undefined} />
-        )}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <View style={styles.titleRow}>

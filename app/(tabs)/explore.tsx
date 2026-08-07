@@ -48,16 +48,26 @@ export default function ExploreScreen() {
     [results, priceRange]
   );
 
+  const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: PlaceSummary }) => (
+      <PlaceListItem place={item} onPress={() => router.push(`/place/${item.id}`)} />
+    ),
+    [router]
+  );
+
   return (
     <ScreenContainer padded={false}>
       <FlatList
         contentContainerStyle={styles.list}
         data={results}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
-        renderItem={({ item }) => (
-          <PlaceListItem place={item} onPress={() => router.push(`/place/${item.id}`)} />
-        )}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <View style={styles.titleRow}>
