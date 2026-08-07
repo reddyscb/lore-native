@@ -30,3 +30,30 @@ usage grows the dataset, but this baseline should not be read as "the app
 was janky before" — it wasn't, at this data volume. The after-fix
 comparison (Task 11) will speak to whether these numbers hold, not to a
 before/after jank fix, since there's no jank at this scale to fix.
+
+## Known issue with this data, found later (during Task 12)
+
+While running the full Maestro suite in Task 12, every flow failed
+identically at the very first launch assertion with a `ConfigError`
+screen. Root cause: a leftover `expo run:ios` process from an unrelated,
+already-deleted git worktree (`.claude/worktrees/dm-feature`, started
+hours earlier by a different, unrelated session) was still holding the
+installed dev client's bundler connection — the exact "stale dev server
+silently hijacks the run" gotcha CLAUDE.md already documents from Phase 7,
+just with a broken worktree this time instead of a working-but-wrong one.
+
+That process had been running the whole time this baseline was captured
+(it started before this session began). Whether the Perf Monitor
+screenshots above were actually served by that stale process or by a
+still-live bundle from a still-earlier, valid session is not fully
+knowable in hindsight — the "Open debugger to view warnings" banner
+present in every screenshot above is at least consistent with something
+being off. **Treat these before-fix numbers as directionally suggestive,
+not as a trustworthy baseline against this exact codebase revision.** A
+true redo would mean reverting to the pre-Task-2 commit, rebuilding, and
+recapturing — not done here, both because it's expensive and because the
+verified-correct after-fix numbers (captured once the stale process was
+killed and a correct Metro server confirmed via a real bundle log, see
+`../after/`) landed at the same 60/60fps ceiling anyway. The conclusion
+in `../comparison.md` doesn't change; the specific before-fix numbers in
+the table above just shouldn't be over-trusted.
