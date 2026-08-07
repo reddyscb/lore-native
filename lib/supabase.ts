@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import 'react-native-url-polyfill/auto';
+import type { Database } from './database.types';
 import { largeSecureStore } from './secure-store-adapter';
 
 // Same Supabase project as the web app (lore-app-iota.vercel.app).
@@ -18,7 +19,7 @@ if (!supabaseUrl || !supabasePublishableKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
     storage: largeSecureStore,
     autoRefreshToken: true,
