@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -24,6 +24,9 @@ export default function DiaryScreen() {
     }, [ownerId])
   );
 
+  const keyExtractor = useCallback((item: DiaryEntry) => item.id, []);
+  const renderItem = useCallback(({ item }: { item: DiaryEntry }) => <DiaryEntryCard entry={item} />, []);
+
   if (loading) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
@@ -37,7 +40,11 @@ export default function DiaryScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={entries}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <PageHeader
             eyebrow="Private — only you can see this"
@@ -50,13 +57,13 @@ export default function DiaryScreen() {
             Nothing yet — check in at a café page to start your diary.
           </Text>
         }
-        renderItem={({ item }) => <DiaryEntryCard entry={item} />}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
 }
 
-function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
+const DiaryEntryCard = memo(function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
   return (
     <Card style={styles.card}>
       <Text style={styles.placeName}>{entry.places?.name ?? 'A place'}</Text>
@@ -68,7 +75,7 @@ function DiaryEntryCard({ entry }: { entry: DiaryEntry }) {
       {entry.note && <Text style={styles.note}>{entry.note}</Text>}
     </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
   centered: {

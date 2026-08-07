@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -63,6 +63,18 @@ export default function PassportScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: PlaceSummary }) => (
+      <StampCell
+        place={item}
+        collected={stamped.has(item.id)}
+        onPress={() => router.push(`/place/${item.id}`)}
+      />
+    ),
+    [stamped, router]
+  );
+
   if (loading) {
     return (
       <ScreenContainer style={styles.centered}>
@@ -78,7 +90,11 @@ export default function PassportScreen() {
         columnWrapperStyle={styles.column}
         numColumns={2}
         data={places}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <View style={styles.titleRow}>
@@ -102,13 +118,7 @@ export default function PassportScreen() {
           </View>
         }
         ListEmptyComponent={<Text style={styles.empty}>No places to stamp yet.</Text>}
-        renderItem={({ item }) => (
-          <StampCell
-            place={item}
-            collected={stamped.has(item.id)}
-            onPress={() => router.push(`/place/${item.id}`)}
-          />
-        )}
+        renderItem={renderItem}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -121,7 +131,7 @@ export default function PassportScreen() {
   );
 }
 
-function StampCell({
+const StampCell = memo(function StampCell({
   place,
   collected,
   onPress,
@@ -142,7 +152,7 @@ function StampCell({
       <Button label={collected ? 'view' : 'visit page'} variant="secondary" onPress={onPress} />
     </Card>
   );
-}
+});
 
 const styles = StyleSheet.create({
   centered: {
