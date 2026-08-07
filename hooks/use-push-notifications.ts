@@ -59,8 +59,12 @@ export function usePushNotifications(userId: string | undefined) {
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { placeId?: string } | undefined;
-      if (data?.placeId) {
+      const data = response.notification.request.content.data as
+        | { placeId?: string; conversationId?: string }
+        | undefined;
+      if (data?.conversationId) {
+        router.push(`/messages/${data.conversationId}`);
+      } else if (data?.placeId) {
         router.push(`/place/${data.placeId}`);
       }
     });

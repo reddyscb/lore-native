@@ -6,6 +6,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
+import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { supabase } from '@/lib/supabase';
@@ -64,7 +65,10 @@ export default function ProfileScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Profile</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Profile</Text>
+        <MessagesIcon />
+      </View>
 
       <Pressable style={styles.avatarRow} onPress={onChangeAvatar} disabled={uploadingAvatar}>
         <Avatar uri={profile?.avatar_url} name={profile?.display_name} size={72} />
@@ -107,6 +111,7 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: {
     fontFamily: fontFamily.display,
     fontSize: fontSize.xxl,

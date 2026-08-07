@@ -19,6 +19,7 @@ import { Chip } from '@/components/ui/Chip';
 import { Button } from '@/components/ui/Button';
 import { PlaceListItem } from '@/components/ui/PlaceListItem';
 import { MediaStrip } from '@/components/ui/MediaStrip';
+import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import {
@@ -80,7 +81,10 @@ function PlacePicker({ onSelect }: { onSelect: (place: PlaceSummary) => void }) 
         renderItem={({ item }) => <PlaceListItem place={item} onPress={() => onSelect(item)} />}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Drop lore</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Drop lore</Text>
+              <MessagesIcon />
+            </View>
             <Text style={styles.subtitle}>Which café is this about?</Text>
             <TextField
               placeholder="Search cafés by name"
@@ -235,7 +239,10 @@ function ComposeForm({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Drop lore</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Drop lore</Text>
+            <MessagesIcon />
+          </View>
 
           <View style={styles.placePinned}>
             <Text style={styles.placeName}>{place.name}</Text>
@@ -353,6 +360,7 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,

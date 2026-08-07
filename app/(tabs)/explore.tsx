@@ -5,6 +5,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { TextField } from '@/components/ui/TextField';
 import { Chip } from '@/components/ui/Chip';
 import { PlaceListItem } from '@/components/ui/PlaceListItem';
+import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { searchPlaces, type PlaceSummary } from '@/lib/queries';
 
@@ -59,7 +60,10 @@ export default function ExploreScreen() {
         )}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Explore</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Explore</Text>
+              <MessagesIcon />
+            </View>
             <TextField
               placeholder="Search cafés by name"
               value={query}
@@ -99,6 +103,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: {
     fontFamily: fontFamily.display,
     fontSize: fontSize.xxl,

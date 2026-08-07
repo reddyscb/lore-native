@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { DropCard } from '@/components/ui/DropCard';
+import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/constants/theme';
 import { fetchDropFeed, type Drop } from '@/lib/queries';
 
@@ -59,7 +60,10 @@ export default function HomeScreen() {
         )}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Home</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Home</Text>
+              <MessagesIcon />
+            </View>
             <View style={styles.quickLinks}>
               <Pressable onPress={() => router.push('/collections')}>
                 <Text style={styles.quickLink}>Collections</Text>
@@ -90,6 +94,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: {
     fontFamily: fontFamily.display,
     fontSize: fontSize.xxl,

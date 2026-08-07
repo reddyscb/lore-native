@@ -13,6 +13,7 @@ import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { MessagesIcon } from '@/components/ui/MessagesIcon';
 import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { fetchStampedPlaceIds, searchPlaces, type PlaceSummary } from '@/lib/queries';
@@ -80,11 +81,16 @@ export default function PassportScreen() {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
-            <PageHeader
-              eyebrow="Lore Passport"
-              title="Your city, one stamp at a time"
-              subtitle="Check in at a place from its café page to collect a stamp."
-            />
+            <View style={styles.titleRow}>
+              <View style={styles.titleRowText}>
+                <PageHeader
+                  eyebrow="Lore Passport"
+                  title="Your city, one stamp at a time"
+                  subtitle="Check in at a place from its café page to collect a stamp."
+                />
+              </View>
+              <MessagesIcon />
+            </View>
             <Pressable onPress={() => router.push('/diary')}>
               <Text style={styles.diaryLink}>view your private diary →</Text>
             </Pressable>
@@ -143,6 +149,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  titleRowText: { flex: 1 },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
