@@ -36,6 +36,7 @@ function RootNavigator() {
         <Stack.Screen name="collections/[id]" options={pushedScreenOptions} />
         <Stack.Screen name="diary" options={pushedScreenOptions} />
         <Stack.Screen name="events" options={pushedScreenOptions} />
+        <Stack.Screen name="messages/index" options={pushedScreenOptions} />
         <Stack.Screen name="owner/claim" options={pushedScreenOptions} />
         <Stack.Screen name="owner/index" options={pushedScreenOptions} />
         <Stack.Screen name="owner/place/[id]" options={pushedScreenOptions} />
