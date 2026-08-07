@@ -90,6 +90,12 @@ export default function ProfileScreen() {
           onPress={() => router.push('/collections')}
         />
         <Button label="Events" variant="secondary" inline onPress={() => router.push('/events')} />
+        <Button
+          label={profile?.role === 'owner' ? 'Owner dashboard' : 'Claim a place'}
+          variant="secondary"
+          inline
+          onPress={() => router.push(profile?.role === 'owner' ? '/owner' : '/owner/claim')}
+        />
       </View>
       <Button label="my diary" variant="ghost" onPress={() => router.push('/diary')} />
 

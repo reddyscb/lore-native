@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Alert,
@@ -158,7 +159,17 @@ export default function PlaceDetailScreen() {
               dishes.map((dish) => (
                 <Card key={dish.id} style={styles.dishCard}>
                   <View style={styles.dishRow}>
-                    <Text style={styles.dishName}>{dish.name}</Text>
+                    <View style={styles.dishRowLeft}>
+                      {dish.photo_url && (
+                        <Image
+                          source={{ uri: dish.photo_url }}
+                          style={styles.dishPhoto}
+                          contentFit="cover"
+                          transition={150}
+                        />
+                      )}
+                      <Text style={styles.dishName}>{dish.name}</Text>
+                    </View>
                     {dish.rating != null && <Text style={styles.dishRating}>{dish.rating}★</Text>}
                   </View>
                   {dish.tag && <Chip label={dish.tag} />}
@@ -388,6 +399,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  dishRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 1,
+  },
+  dishPhoto: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   dishName: {
     fontFamily: fontFamily.bodyMedium,
