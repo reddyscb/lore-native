@@ -166,6 +166,7 @@ export default function PlaceDetailScreen() {
                           style={styles.dishPhoto}
                           contentFit="cover"
                           transition={150}
+                          cachePolicy="memory-disk"
                         />
                       )}
                       <Text style={styles.dishName}>{dish.name}</Text>

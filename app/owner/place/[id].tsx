@@ -304,7 +304,13 @@ function DishRow({
     <View style={dishRowStyles.row}>
       <Pressable onPress={onChangePhoto} disabled={uploadingPhoto}>
         {dish.photo_url ? (
-          <Image source={{ uri: dish.photo_url }} style={dishRowStyles.photo} contentFit="cover" transition={150} />
+          <Image
+            source={{ uri: dish.photo_url }}
+            style={dishRowStyles.photo}
+            contentFit="cover"
+            transition={150}
+            cachePolicy="memory-disk"
+          />
         ) : (
           <View style={dishRowStyles.photoPlaceholder}>
             {uploadingPhoto ? (

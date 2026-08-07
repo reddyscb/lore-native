@@ -33,7 +33,14 @@ export function MediaStrip({ media, onRemove }: Props) {
           {item.media_type === 'video' ? (
             <VideoThumb uri={item.url} />
           ) : (
-            <Image source={{ uri: item.url }} style={styles.thumb} contentFit="cover" transition={150} />
+            <Image
+              source={{ uri: item.url }}
+              style={styles.thumb}
+              contentFit="cover"
+              transition={150}
+              cachePolicy="memory-disk"
+              recyclingKey={item.id}
+            />
           )}
           {onRemove && (
             <Pressable style={styles.removeButton} onPress={() => onRemove(item.id)} hitSlop={8}>

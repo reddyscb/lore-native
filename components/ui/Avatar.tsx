@@ -19,6 +19,8 @@ export function Avatar({ uri, name, size = 36 }: Props) {
         style={[styles.image, dimension]}
         contentFit="cover"
         transition={150}
+        cachePolicy="memory-disk"
+        recyclingKey={uri}
       />
     );
   }
