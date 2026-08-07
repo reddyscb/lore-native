@@ -256,9 +256,99 @@ rewrite actually needs:
   `fetchDiaryEntries`, `fetchEvents` in `lib/queries.ts` all gained safety
   `.limit()`s so none of them can degrade into an unbounded query as data
   grows.
-- **Later:** owner dashboard, a dedicated polish pass (list
-  virtualization, image caching, transition tuning), then store
-  submission prep.
+- **Phase 7 — done, verified end-to-end on a real booted Simulator**
+  (`npm run test:e2e` green, plus a manual walkthrough of everything
+  Maestro can't drive — see below). Owner dashboard: claim an unclaimed
+  café, manage its open/closed status and tagline, and manage its dish
+  menu (add/edit/delete, tap-to-set 1–5 star rating, tap-to-upload photo).
+  Three new pushed-stack screens under `app/owner/` — claim
+  (`app/owner/claim.tsx`, lists places with `owner_id is null`, one tap
+  claims), dashboard (`app/owner/index.tsx`, lists the signed-in user's
+  owned places), and per-place manage (`app/owner/place/[id].tsx`,
+  status/tagline editing plus the dish list and an add-dish form) —
+  reached from a new Profile tab button that reads "Claim a place" or
+  "Owner dashboard" depending on `profiles.role`. New `dishes.photo_url`
+  column and a `dish-photos` Storage bucket (public-read, owner-scoped
+  write RLS keyed off the storage path's `{place_id}/...` segment, same
+  pattern as `avatars`/`drop-media` from Phase 5) via the
+  `phase7_dishes_photo_url` and `phase7_dish_photos_bucket` migrations.
+  New `components/ui/StarRating.tsx` (read-only when `onChange` is
+  omitted, tap-to-set otherwise), reused for dish-rating entry here and
+  available for future read-only display. Claiming flips `profiles.role`
+  to `'owner'` *before* the `places.owner_id` update, since the "an owner
+  can claim an unclaimed place" RLS policy's `WITH CHECK` requires
+  `role = 'owner'` to already be true — same two-step order the web app's
+  `claimPlace` server action uses; a losing racer in the claim race gets a
+  clear thrown error (verified via `.select('id')` on the second update)
+  but keeps a stray `role: 'owner'` on their own profile with no
+  compensating rollback, a known, accepted gap carried from the original
+  design. There is deliberately no "unclaim" feature (YAGNI, see
+  `docs/superpowers/specs/2026-08-06-owner-dashboard-design.md`) — claiming
+  is one-way, which the Maestro flow below has to work around. Dish
+  rating and tag editing did not exist on the web app at all before this —
+  greenfield here, not a port. Café detail (`app/place/[id].tsx`) now
+  shows a small thumbnail next to any dish that has a `photo_url`.
+  Built (Tasks 1–11) via `superpowers:subagent-driven-development` in a
+  git worktree during a session with no booted Simulator, so it initially
+  shipped as code-complete-but-unverified — `npx tsc --noEmit` and
+  `npx eslint . --ext .ts,.tsx` clean project-wide, including a genuine
+  (non-stale) typed-routes check (`.expo/types/router.d.ts` didn't exist
+  in that checkout until a real `npx expo start` run generated it), but
+  nothing had actually been run on a device. A follow-up session then
+  ran the real thing end to end: `npm run test:e2e` (12 flows, including
+  the new `phase7-owner-dashboard.yaml`) plus a manual walkthrough of
+  claim → status/tagline save → add/edit a dish → tap-to-upload a dish
+  photo (native picker, can't be Maestro-driven — seeded a solid-color
+  test photo via `xcrun simctl addmedia`, confirmed it uploads to
+  `dish-photos` and renders both on the manage screen and the public
+  café-detail thumbnail) → remove a dish, all against the real seed place
+  `Maestro Claim Test Café`.
+  **Two environment assumptions from the code-complete pass turned out to
+  be wrong, not just incomplete** — worth internalizing for any future
+  session in this same setup:
+  - **"No Simulator available" was never actually tested.** `xcrun simctl
+    list devices booted` returning nothing only means nothing is
+    *currently* booted, not that nothing *can* be booted. `xcrun simctl
+    boot <device>` worked immediately, first try, no special setup.
+    Simulators here are always available; a session just has to boot one.
+  - **A single stale `expo start` process on the default port can silently
+    hijack an entire test run.** A leftover dev server for the *main*
+    repo checkout (unrelated to this worktree, over a day old, from some
+    earlier session) was still listening on :8081. Pointing the worktree's
+    own Metro at a different port and launching the app didn't stop the
+    already-installed dev client from reconnecting to whatever bundler URL
+    it had cached — which was the stale server's. The entire first full
+    Maestro run "passed" 11 of 14 flows and failed the other 3 for reasons
+    that looked like real regressions, but every flow had actually
+    exercised **main's old code, not this branch** — confirmed by
+    `phase7-owner-dashboard.yaml` failing at "Claim a place" not being on
+    the Profile screen at all, because that code doesn't exist on main.
+    Fix: kill every other `expo`/Metro process first, then confirm the
+    intended server is the one actually being hit by checking *its own*
+    log for a real full bundle (`Bundled ...ms ... (N modules)` with N in
+    the hundreds/thousands) after a fresh app launch — a small `(1
+    module)` line is Metro's normal incremental-request cost and does not
+    by itself prove which server served the app.
+  Running against the real, correctly-connected code surfaced three real
+  bugs invisible to `tsc`/`eslint`/code review, all fixed in this phase
+  before merge:
+  - `borderStyle: 'dashed'` (used on the manage screen's divider and dish-
+    row separator) triggers React Native's "Unsupported dashed / dotted
+    border style" warning on this RN version — an uncaught warning that
+    surfaces the debugger banner over newly rendered content, the same
+    mechanism documented below for the tab bar. Switched both to solid,
+    matching every other border in the app (no screen here used a dashed
+    border before this phase).
+  - `maestro/phase7-owner-dashboard.yaml`'s `tapOn: "Add"` after
+    `pressKey: Enter` was chasing a button already pushed out of the
+    scrolled viewport by the newly-added dish row — Enter's
+    `onSubmitEditing` already completes the add. Removed the redundant
+    tap; see the new Maestro gotcha below for the same fix applied to a
+    native alert button.
+  - The delete-dish confirm flow's final `assertNotVisible` ran ahead of
+    `deleteDish`'s network round-trip; switched to `extendedWaitUntil`.
+- **Later:** a dedicated polish pass (list virtualization, image caching,
+  transition tuning), then store submission prep.
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
@@ -279,12 +369,13 @@ owner dashboard later. It's a snapshot, not a live mirror — re-clone or
 (Profile smoke test, Home feed + café detail, Explore search/filter, the
 compose-and-tag write path, the reply composer, Phase 4's
 passport/diary, check-in, collections, and events/ticket-reservation
-flows, and Phase 5's media section/avatar affordance smoke test). Phase 6
-added no new flow of its own — push notifications have no UI path
-Maestro can drive (permission dialogs are OS UI, and Simulator can't get
-a real token anyway), so that phase leans entirely on the existing suite
-staying green plus the schema-level `net._http_response` check described
-above. Run it with `npm run test:e2e` — this runs each flow one at a time
+flows, Phase 5's media section/avatar affordance smoke test, and Phase 7's
+owner-dashboard write path). Phase 6 added no new flow of its own — push
+notifications have no UI path Maestro can drive (permission dialogs are OS
+UI, and Simulator can't get a real token anyway), so that phase leans
+entirely on the existing suite staying green plus the schema-level
+`net._http_response` check described above. Run it with
+`npm run test:e2e` — this runs each flow one at a time
 via `scripts/test-e2e.sh` against a booted Simulator with the app already
 installed (running the whole `maestro/` folder at once via
 `maestro test maestro/` showed scheduling flakiness; one at a time is
@@ -300,7 +391,12 @@ before using them if `command not found`.
 with a **signed-in session already present** (auth can't be scripted —
 flows assume you're logged in and land on the tab bar), and the seed
 data the flows reference still existing (places "The Copper Pot" and
-"Ruskin & Rye", a profile named "sree" for the tagging flow). Reinstalling
+"Ruskin & Rye", a profile named "sree" for the tagging flow, and an
+unclaimed place named "Maestro Claim Test Café" — id
+`80a63bec-6542-41bc-b96c-acdb6ad524c3` — reserved for
+`phase7-owner-dashboard.yaml`; see that file's header comment for the
+reset SQL needed before re-running it, since claiming has no reverse
+operation). Reinstalling
 the app (e.g. `npx expo run:ios` after a native-level change) wipes the
 signed-in session — SecureStore's Keychain item is tied to the install —
 so sign in again before running the suite if you've just done that.
@@ -315,6 +411,13 @@ no-op past the first. `phase4-events` reserves 1 ticket per run against a
 real seed event — `tickets_total` was padded with headroom specifically so
 the suite doesn't eventually sell the event out and start failing; if it
 ever does, bump `tickets_total` again (dev data, not schema).
+`phase7-owner-dashboard` is a third kind of exception: unlike the
+accumulate-forever flows above or `phase4-collections`'s no-op-on-repeat,
+it's only re-runnable from a clean state — claiming a place has no
+reverse operation by design, so re-running without first resetting
+`places.owner_id`/`status`/`reopen_date` and the test account's
+`profiles.role` (exact SQL in the flow file's header comment) will fail
+at an early step rather than silently duplicating data.
 
 **Gotchas hit building this suite, worth knowing before writing more
 flows:**
@@ -400,6 +503,40 @@ flows:**
   image instead of the real tab bar. Any photo/video with visible text
   works as picker-verification media — just not one containing this
   app's own UI chrome.
+- **A screen with one interactive element carrying identical text per
+  list row can't be disambiguated with a bare `tapOn` — needs a relative
+  selector.** Found writing Phase 7's flow: `app/owner/index.tsx` renders
+  one Card + one "Manage" `Button` per place the signed-in account owns.
+  Unlike the composite-label place cards elsewhere in the app (first
+  gotcha above), this Card is a plain `View`, not a single `Pressable`, so
+  each "Manage" button is its own separate accessible element with the
+  exact same label on every card — a bare `tapOn: "Manage"` hits whichever
+  one Maestro's accessibility walk finds first, not necessarily the place
+  the flow just claimed. Fixed with Maestro's relative-selector syntax
+  (new to this repo's flows): `tapOn: { text: "Manage", below:
+  ".*<place name>.*" }` scopes the tap to the "Manage" button positioned
+  below that specific place's name text. The same technique applies to any
+  other screen with N visually-identical buttons in a list.
+- **`tapOn` by text can silently fail to dismiss a native
+  `Alert.alert` button — it reports `COMPLETED` but nothing happens.**
+  Found finishing Phase 7's delete-dish confirm step: `tapOn: "Remove"`
+  against the destructive button in a native `UIAlertController`
+  consistently left the dialog open (reproduced 3 times in a row,
+  screenshot showed the same "Remove this dish?" alert every time), yet
+  Maestro never reported a failure on that step — only the *next*
+  assertion failed, elsewhere on screen, which is what made it look at
+  first like a delete-didn't-complete bug rather than a tap-didn't-land
+  bug. Confirmed the real cause by comparing against a manual coordinate
+  tap at the same button (`idb ui describe-all` to get its real frame,
+  then `idb ui tap <x> <y>`), which dismissed the dialog immediately.
+  Fix: for any native `Alert.alert` button (this app's other confirm
+  dialogs may hit the same issue — none currently have an automated
+  flow), use a `tapOn: { point: "X%,Y%" }` at the button's center instead
+  of text matching. Get the real coordinates from `idb ui describe-all`
+  and convert to a percentage of `idb describe`'s `screen_dimensions`
+  (`width_points`/`height_points`) rather than eyeballing from a
+  screenshot — same convention as getting any other idb tap coordinate in
+  this repo.
 
 **Real bugs this suite caught, not just test flakiness:** the Explore
 tab, Post tab's place picker, and café detail's reply box were all
@@ -409,7 +546,10 @@ typing just dismisses the keyboard instead of registering — a real user
 tapping a search result immediately after typing would need to tap twice.
 Fixed in all three screens. Phase 6 added one more: `expo-notifications`'s
 own startup warning was covering the tab bar for real users too, not
-just tests — see the LogBox gotcha above.
+just tests — see the LogBox gotcha above. Phase 7 added another: the
+manage screen's `borderStyle: 'dashed'` triggered the same
+uncaught-warning-covers-the-UI mechanism, this time over the add-dish
+form instead of the tab bar — see the Phase 7 entry above.
 
 ## Conventions
 
