@@ -20,6 +20,11 @@ const pushedScreenOptions = {
   headerTintColor: colors.ink,
   headerTitleStyle: { fontFamily: fontFamily.body },
   headerShadowVisible: false,
+  // Pauses a pushed screen's React tree once the next screen fully covers
+  // it, instead of leaving it mounted and re-rendering in the background —
+  // a real win for screens like café detail and the messages thread that
+  // otherwise keep doing state-driven work while off-screen.
+  freezeOnBlur: true,
 } as const;
 
 function RootNavigator() {
