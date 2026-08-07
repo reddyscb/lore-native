@@ -28,6 +28,7 @@ import {
   updateDish,
   deleteDish,
   uploadDishPhoto,
+  addDish,
   type Place,
   type Dish,
 } from '@/lib/queries';
@@ -55,6 +56,8 @@ export default function ManagePlaceScreen() {
   const [taglineSaved, setTaglineSaved] = useState(false);
 
   const [dishes, setDishes] = useState<Dish[]>([]);
+  const [newDishName, setNewDishName] = useState('');
+  const [addingDish, setAddingDish] = useState(false);
 
   // Re-fetch on focus (e.g. returning here after editing elsewhere) —
   // `loading` only gates the very first load, so later focuses refresh in
@@ -100,6 +103,20 @@ export default function ManagePlaceScreen() {
       Alert.alert('Could not save', error instanceof Error ? error.message : 'Something went wrong.');
     } finally {
       setSavingTagline(false);
+    }
+  }
+
+  async function onAddDish() {
+    if (!id || !newDishName.trim() || addingDish) return;
+    setAddingDish(true);
+    try {
+      const dish = await addDish(id, { name: newDishName.trim() });
+      setDishes((prev) => [...prev, dish]);
+      setNewDishName('');
+    } catch (error) {
+      Alert.alert('Could not add dish', error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setAddingDish(false);
     }
   }
 
@@ -204,6 +221,18 @@ export default function ManagePlaceScreen() {
               }}
             />
           ))}
+
+          <View style={styles.addDishRow}>
+            <TextField
+              placeholder="Add a dish…"
+              value={newDishName}
+              onChangeText={setNewDishName}
+              containerStyle={styles.addDishField}
+              onSubmitEditing={onAddDish}
+              returnKeyType="done"
+            />
+            <Button label={addingDish ? '…' : 'Add'} inline loading={addingDish} onPress={onAddDish} />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>
@@ -398,6 +427,15 @@ const styles = StyleSheet.create({
     borderTopColor: colors.creamDeep,
     borderStyle: 'dashed',
     marginVertical: spacing.xl,
+  },
+  addDishRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  addDishField: {
+    flex: 1,
   },
   empty: {
     fontFamily: fontFamily.body,
