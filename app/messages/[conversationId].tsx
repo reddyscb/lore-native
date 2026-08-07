@@ -114,34 +114,40 @@ export default function ConversationScreen() {
   }
 
   async function onPickMedia() {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Photo access needed', 'Allow photo library access in Settings to attach media.');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      quality: 0.7,
-      videoMaxDuration: 60,
-    });
-
-    if (result.canceled || !conversationId || !selfId) return;
-
-    const asset = result.assets[0];
-    setSendingMedia(true);
     try {
-      const sent = await sendMessageMedia(conversationId, selfId, {
-        uri: asset.uri,
-        mediaType: asset.type === 'video' ? 'video' : 'image',
-        mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Photo access needed', 'Allow photo library access in Settings to attach media.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        quality: 0.7,
+        videoMaxDuration: 60,
       });
-      seenIds.current.add(sent.id);
-      setMessages((prev) => [...prev, sent]);
+
+      if (result.canceled || !conversationId || !selfId) return;
+
+      const asset = result.assets[0];
+      setSendingMedia(true);
+      try {
+        const sent = await sendMessageMedia(conversationId, selfId, {
+          uri: asset.uri,
+          mediaType: asset.type === 'video' ? 'video' : 'image',
+          mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+        });
+        if (!seenIds.current.has(sent.id)) {
+          seenIds.current.add(sent.id);
+          setMessages((prev) => [...prev, sent]);
+        }
+      } catch (error) {
+        Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
+      } finally {
+        setSendingMedia(false);
+      }
     } catch (error) {
       Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setSendingMedia(false);
     }
   }
 
