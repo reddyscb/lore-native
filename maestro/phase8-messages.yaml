@@ -1,0 +1,81 @@
+appId: com.reddyscb.lore
+---
+# Covers the single-account path for Phase 8 (DMs): open the inbox, start a
+# new conversation via search, send a text message, see it in the thread,
+# back out and see it listed in the inbox.
+#
+# Real two-account delivery, live realtime receipt, and push notification
+# receipt are the same category of limitation Phase 6 hit with push — they
+# need manual verification (two simulators, or a simulator + a physical
+# device), not an automated flow. See CLAUDE.md's Regression testing section.
+#
+# Assumes seed data: a profile named "sree" (reused from the Phase 3 tagging
+# flow's seed data). Assumes a signed-in session already exists in the
+# simulator, under a *different* account than "sree" (can't message
+# yourself — see get_or_create_direct_conversation's guard).
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 15000
+
+- tapOn: ".*Messages.*"
+- extendedWaitUntil:
+    visible: "Your conversations"
+    timeout: 8000
+- tapOn: "New"
+- tapOn: "Search people by name"
+- inputText: "sree"
+- extendedWaitUntil:
+    visible: ".*sree.*"
+    timeout: 8000
+# Dismiss the keyboard before tapping the result — a tap while the keyboard
+# (and its predictive-text suggestion bar) is still up can miscompute the
+# hit point on this iOS Simulator/XCTest combination and silently miss.
+# The search field is single-line, so Enter blurs it via RN's default
+# blurOnSubmit — same fix CLAUDE.md documents for this exact gotcha
+# elsewhere in the suite (phase3-explore, phase7-owner-dashboard).
+- pressKey: Enter
+# The dev seed data has two distinct profiles both named "sree" (confirmed
+# via a live query, not a rendering artifact), so a bare tapOn is
+# ambiguous — same "identical text per row" disambiguation problem
+# CLAUDE.md documents for Phase 7's per-place "Manage" buttons, and the
+# same fix phase3-compose-and-tag.yaml already uses for this exact query.
+- tapOn:
+    text: ".*sree.*"
+    index: 1
+- extendedWaitUntil:
+    visible: "Write a message…"
+    timeout: 8000
+- tapOn: "Write a message…"
+- inputText: "Maestro regression message"
+# KNOWN FLAKY STEP, not fixed — leaving this failing deliberately per an
+# explicit team decision, not overlooked. On this Simulator/iOS build,
+# iOS's QuickType predictive-suggestion bar (visible above the keyboard
+# once "message" is typed) persists after the field blurs and its touch
+# region overlaps the Send button closely enough that tapOn keeps
+# registering a stray keyboard keypress (a literal "O" appended to the
+# draft) instead of the button. Confirmed via a live manual test that
+# sending genuinely works for a real user with the keyboard open — this
+# is a test-tooling artifact, not a real app bug. Five different
+# workarounds were tried and all failed identically: pressKey: Enter to
+# blur first, tapping an inert Text to blur first, Maestro's index-based
+# tap disambiguation, a raw point-based tap at the button's real center
+# (via idb ui describe-all + idb describe screen_dimensions, the same
+# convention documented for native Alert.alert buttons), and Maestro's
+# pasteText in place of inputText (not supported in this Maestro
+# version). If picked back up later, the next thing worth trying is
+# disabling autoCorrect on the composer field to suppress the QuickType
+# bar outright — not attempted yet since it changes real user-facing
+# behavior and wasn't confirmed necessary.
+- tapOn: "Send"
+- extendedWaitUntil:
+    visible: "Maestro regression message"
+    timeout: 8000
+# Dismiss the keyboard via a tap on inert text (not "Back") before
+# navigating — a multiline field's Enter key inserts a newline instead of
+# blurring, and tapping a distant element with the keyboard still up has
+# previously misfired in this app's Maestro suite. See CLAUDE.md.
+- tapOn: ".*sree.*"
+- tapOn: "Back"
+- assertVisible: ".*Maestro regression message.*"
