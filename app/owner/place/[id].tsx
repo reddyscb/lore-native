@@ -348,7 +348,6 @@ const dishRowStyles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1.5,
     borderBottomColor: colors.creamDeep,
-    borderStyle: 'dashed',
   },
   photo: {
     width: 52,
@@ -425,7 +424,6 @@ const styles = StyleSheet.create({
   divider: {
     borderTopWidth: 2,
     borderTopColor: colors.creamDeep,
-    borderStyle: 'dashed',
     marginVertical: spacing.xl,
   },
   addDishRow: {
