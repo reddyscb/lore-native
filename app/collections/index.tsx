@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -26,6 +26,14 @@ export default function CollectionsScreen() {
     }, [ownerId])
   );
 
+  const keyExtractor = useCallback((item: CollectionWithCount) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: CollectionWithCount }) => (
+      <CollectionRow collection={item} onPress={() => router.push(`/collections/${item.id}`)} />
+    ),
+    [router]
+  );
+
   if (loading) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
@@ -39,7 +47,11 @@ export default function CollectionsScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={collections}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <PageHeader
             eyebrow="Your collections"
@@ -52,20 +64,30 @@ export default function CollectionsScreen() {
             No collections yet — save a place from its café page to start one.
           </Text>
         }
-        renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/collections/${item.id}`)}>
-            <Card style={styles.card}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.count}>
-                {item.placeCount} place{item.placeCount === 1 ? '' : 's'} saved
-              </Text>
-            </Card>
-          </Pressable>
-        )}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
 }
+
+const CollectionRow = memo(function CollectionRow({
+  collection,
+  onPress,
+}: {
+  collection: CollectionWithCount;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress}>
+      <Card style={styles.card}>
+        <Text style={styles.name}>{collection.name}</Text>
+        <Text style={styles.count}>
+          {collection.placeCount} place{collection.placeCount === 1 ? '' : 's'} saved
+        </Text>
+      </Card>
+    </Pressable>
+  );
+});
 
 const styles = StyleSheet.create({
   centered: {

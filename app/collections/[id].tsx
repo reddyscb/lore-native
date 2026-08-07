@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
@@ -25,6 +25,14 @@ export default function CollectionDetailScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
+  const renderItem = useCallback(
+    ({ item }: { item: PlaceSummary }) => (
+      <PlaceListItem place={item} onPress={() => router.push(`/place/${item.id}`)} />
+    ),
+    [router]
+  );
+
   if (loading) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
@@ -46,7 +54,11 @@ export default function CollectionDetailScreen() {
       <FlatList
         contentContainerStyle={styles.list}
         data={places}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews
         ListHeaderComponent={
           <PageHeader
             eyebrow="Collection"
@@ -55,9 +67,7 @@ export default function CollectionDetailScreen() {
           />
         }
         ListEmptyComponent={<Text style={styles.empty}>Nothing here yet.</Text>}
-        renderItem={({ item }) => (
-          <PlaceListItem place={item} onPress={() => router.push(`/place/${item.id}`)} />
-        )}
+        renderItem={renderItem}
       />
     </ScreenContainer>
   );
