@@ -12,9 +12,12 @@ import {
   Text,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/components/ui/ScreenContainer';
 import { TextField } from '@/components/ui/TextField';
 import { Avatar } from '@/components/ui/Avatar';
+import { MediaStrip } from '@/components/ui/MediaStrip';
 import { colors, fontFamily, fontSize, radii, spacing } from '@/constants/theme';
 import { useAuthContext } from '@/hooks/use-auth-context';
 import { useMessagesRealtime } from '@/hooks/use-messages-realtime';
@@ -25,6 +28,7 @@ import {
   fetchMessages,
   markConversationRead,
   sendMessage,
+  sendMessageMedia,
   type Conversation,
   type Message,
 } from '@/lib/messages';
@@ -40,6 +44,7 @@ export default function ConversationScreen() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendingMedia, setSendingMedia] = useState(false);
   const seenIds = useRef(new Set<string>());
   const listRef = useRef<FlatList<Message>>(null);
 
@@ -105,6 +110,38 @@ export default function ConversationScreen() {
       setDraft(body);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function onPickMedia() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Photo access needed', 'Allow photo library access in Settings to attach media.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.7,
+      videoMaxDuration: 60,
+    });
+
+    if (result.canceled || !conversationId || !selfId) return;
+
+    const asset = result.assets[0];
+    setSendingMedia(true);
+    try {
+      const sent = await sendMessageMedia(conversationId, selfId, {
+        uri: asset.uri,
+        mediaType: asset.type === 'video' ? 'video' : 'image',
+        mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+      });
+      seenIds.current.add(sent.id);
+      setMessages((prev) => [...prev, sent]);
+    } catch (error) {
+      Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
+    } finally {
+      setSendingMedia(false);
     }
   }
 
@@ -190,6 +227,13 @@ export default function ConversationScreen() {
         />
 
         <View style={styles.composer}>
+          <Pressable onPress={onPickMedia} disabled={sendingMedia} style={styles.attachButton}>
+            {sendingMedia ? (
+              <ActivityIndicator color={colors.ink} size="small" />
+            ) : (
+              <Ionicons name="image-outline" size={22} color={colors.ink} />
+            )}
+          </Pressable>
           <TextField
             containerStyle={styles.composerField}
             placeholder="Write a message…"
@@ -221,6 +265,9 @@ export function MessageBubble({
       style={[styles.bubbleRow, isSelf ? styles.bubbleRowSelf : styles.bubbleRowOther]}
     >
       <View style={[styles.bubble, isSelf ? styles.bubbleSelf : styles.bubbleOther]}>
+        {message.media_url && (
+          <MediaStrip media={[{ id: message.id, media_type: message.media_type ?? 'image', url: message.media_url }]} />
+        )}
         {message.body && <Text style={[styles.bubbleText, isSelf && styles.bubbleTextSelf]}>{message.body}</Text>}
       </View>
     </Pressable>
@@ -268,6 +315,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   composerField: { flex: 1 },
+  attachButton: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.button,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sendButton: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
