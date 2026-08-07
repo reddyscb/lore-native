@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { EXTENSION_BY_MIME_TYPE, type PickedMedia } from './queries';
 
 export type MessageParticipant = {
   id: string;
@@ -125,6 +126,47 @@ export async function sendMessage(conversationId: string, senderId: string, body
 
   if (error) throw error;
   return data as Message;
+}
+
+/** Creates the message row first (to get a real id), uploads to
+ *  `message-media/{conversation_id}/{message_id}.<ext>` keyed to that id,
+ *  then updates the row with the path — same insert-then-upload ordering
+ *  Phase 5 used for drop media. */
+export async function sendMessageMedia(
+  conversationId: string,
+  senderId: string,
+  media: PickedMedia
+): Promise<Message> {
+  const { data: inserted, error: insertError } = await supabase
+    .from('messages')
+    .insert({ conversation_id: conversationId, sender_id: senderId, media_type: media.mediaType })
+    .select('*')
+    .single();
+
+  if (insertError) throw insertError;
+  const message = inserted as Message;
+
+  const ext = EXTENSION_BY_MIME_TYPE[media.mimeType] ?? 'bin';
+  const path = `${conversationId}/${message.id}.${ext}`;
+  const arraybuffer = await fetch(media.uri).then((res) => res.arrayBuffer());
+
+  const { error: uploadError } = await supabase.storage
+    .from('message-media')
+    .upload(path, arraybuffer, { contentType: media.mimeType, upsert: true });
+
+  if (uploadError) throw uploadError;
+
+  const { data: updated, error: updateError } = await supabase
+    .from('messages')
+    .update({ media_path: path })
+    .eq('id', message.id)
+    .select('*')
+    .single();
+
+  if (updateError) throw updateError;
+
+  const [withUrl] = await resolveMessageMediaUrls([updated as Message]);
+  return withUrl;
 }
 
 export async function markConversationRead(conversationId: string, userId: string): Promise<void> {

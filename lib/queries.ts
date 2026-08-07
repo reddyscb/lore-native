@@ -205,7 +205,7 @@ export type PickedMedia = {
   mimeType: string;
 };
 
-const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
+export const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/heic': 'heic',
