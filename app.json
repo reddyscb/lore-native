@@ -78,7 +78,13 @@
         }
       ],
       "expo-notifications",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "lore. uses this to understand which features people use, so we can improve the app. This never tracks you across other apps or websites."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

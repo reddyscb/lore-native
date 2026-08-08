@@ -130,6 +130,18 @@ Before crash reports will actually reach anyone (Phase 11 Step 3):
    is Sentry's own supported way to disable sending — so no code change
    is needed once the DSN exists, just the `.env` value.
 
+Before analytics events will actually reach anyone (Phase 11 Step 11):
+
+4. Create a project at [posthog.com](https://posthog.com) (**EU Cloud**
+   region — `src/shared/components/analytics-provider.tsx`'s
+   `PostHogProvider` is hardcoded to `https://eu.i.posthog.com`), then
+   paste its project API key into `.env`'s
+   `EXPO_PUBLIC_POSTHOG_API_KEY`. An empty/missing key is a harmless
+   no-op — `AnalyticsProvider` skips mounting `PostHogProvider` entirely
+   in that case, so every `posthog?.capture(...)`/`posthog?.screen(...)`
+   call site just no-ops — so no code change is needed once the key
+   exists, just the `.env` value — same pattern as Sentry's DSN above.
+
 ## Phase plan (native rewrite)
 
 Mirrors the web app's phases conceptually, but re-scoped for what a native

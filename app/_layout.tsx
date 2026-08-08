@@ -6,8 +6,10 @@ import { SplashScreenController } from '@/shared/components/splash-screen-contro
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useAppFonts } from '@/shared/hooks/use-app-fonts';
 import { usePushNotifications } from '@/shared/hooks/use-push-notifications';
+import { useTrackingTransparency } from '@/shared/hooks/use-tracking-transparency';
 import AuthProvider from '@/features/auth/components/auth-provider';
 import QueryProvider from '@/shared/components/query-provider';
+import AnalyticsProvider from '@/shared/components/analytics-provider';
 import { colors, fontFamily } from '@/shared/theme/theme';
 
 // Sentry.init must always run (not just when a DSN is set) — Sentry.wrap
@@ -26,6 +28,7 @@ Sentry.init({
   debug: __DEV__ && Boolean(sentryDsn),
   tracesSampleRate: 0.1,
 });
+
 
 // Three mutually-exclusive states, each its own protected branch:
 //  1. logged out              -> (auth) welcome / phone / verify
@@ -49,6 +52,7 @@ const pushedScreenOptions = {
 function RootNavigator() {
   const { isLoggedIn, needsOnboarding, session } = useAuthStore();
   usePushNotifications(isLoggedIn && !needsOnboarding ? session?.user?.id : undefined);
+  useTrackingTransparency(isLoggedIn && !needsOnboarding ? session?.user?.id : undefined);
 
   return (
     <Stack>
@@ -83,13 +87,15 @@ function RootLayout() {
   const fontsLoaded = useAppFonts();
 
   return (
-    <QueryProvider>
-      <AuthProvider>
-        <SplashScreenController fontsLoaded={fontsLoaded} />
-        {fontsLoaded && <RootNavigator />}
-        <StatusBar style="dark" />
-      </AuthProvider>
-    </QueryProvider>
+    <AnalyticsProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <SplashScreenController fontsLoaded={fontsLoaded} />
+          {fontsLoaded && <RootNavigator />}
+          <StatusBar style="dark" />
+        </AuthProvider>
+      </QueryProvider>
+    </AnalyticsProvider>
   );
 }
 

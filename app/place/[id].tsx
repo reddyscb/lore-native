@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { usePostHog } from 'posthog-react-native';
 import {
   ActivityIndicator,
   Alert,
@@ -40,9 +41,14 @@ const LORE_FIELDS: { key: keyof Place; label: string }[] = [
 
 export default function PlaceDetailScreen() {
   const router = useRouter();
+  const posthog = usePostHog();
   const { profile, session } = useAuthStore();
   const authorId = profile?.id ?? session?.user?.id ?? '';
   const { id } = useLocalSearchParams<{ id: string }>();
+
+  useEffect(() => {
+    if (id) posthog?.screen('PlaceDetail', { place_id: id });
+  }, [id, posthog]);
   // `place` gates the initial paint (it's a fast single-row lookup, and we
   // need it for the header regardless), but dishes/drops load independently
   // afterward with their own small inline spinners rather than blocking the
