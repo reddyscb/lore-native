@@ -31,6 +31,7 @@ ask directly rather than looking for a way around it.)
 ## 3. SECURITY DEFINER hardening
 
 Any `SECURITY DEFINER` function must:
+
 - Pin `search_path = ''`.
 - Fully-qualify every object reference (e.g. `public.push_tokens`, not
   `push_tokens`) — built-ins in `pg_catalog` stay reachable even with an
@@ -42,6 +43,7 @@ Any `SECURITY DEFINER` function must:
 After `apply_migration`, always run `get_advisors` (security and
 performance) before considering the migration done. Recurring findings in
 this project's history, both worth fixing immediately when seen again:
+
 - An extension installed in `public` instead of `extensions` schema
   (`extension_in_public`) — fix by dropping and recreating with an explicit
   `schema extensions`.

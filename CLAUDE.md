@@ -581,49 +581,92 @@ before/README.md` and `comparison.md` rather than silently
     build" section and retired its stale "What to check before moving to
     Phase 2" checklist, which hadn't been touched since Phase 1 and badly
     undersold everything shipped since.
-- **Phase 11 — planned, not started.** Architecture foundation pass. The
-  app is feature-complete through Phase 9 but was built linearly by one
-  developer: no server-state caching layer, a single god-file data layer
-  (`lib/queries.ts`), no generated Supabase types, no error boundaries, no
-  crash/analytics visibility, and no CI/CD. None of that blocks any
-  shipped feature today, but it compounds as the app grows toward App
-  Store submission and real users — this phase closes the gap
-  proactively, the same motivation as Phase 9's performance pass. Full
-  plan, gap assessment, and code samples for all steps live in
+- **Phase 11 — done, verified end-to-end** (`npx tsc --noEmit` and
+  `npx eslint . --ext .ts,.tsx` clean project-wide; `npm run test:e2e`
+  9/12 green, the same count and the same three pre-existing,
+  already-documented gaps as Phase 8/9's own runs — see below). Architecture
+  foundation pass, 11 steps. The app was feature-complete through Phase 9
+  but built linearly by one developer: no server-state caching layer, a
+  single god-file data layer (`lib/queries.ts`), no generated Supabase
+  types, no error boundaries, no crash/analytics visibility, and no
+  CI/CD. Full plan, gap assessment, and code samples live in
   `docs/superpowers/specs/2026-08-07-architecture-foundation-design.md`
   (reviewed sequencing) and
   `docs/superpowers/specs/lore-native-foundation-roadmap.md` (original
-  v1.0 source doc). Two goals bundled together: (1) architectural
-  scalability — generated Supabase types, feature-based folders
-  (`src/features/*`), TanStack Query for server state, Zustand for client
-  state, error boundaries; (2) store-readiness — this app has never been
-  submitted, and a missing `PrivacyInfo.xcprivacy` is an automatic
-  rejection, while zero crash reporting means the first sign of a
-  production bug is a 1-star review. Sequencing deliberately reorders the
-  source document's Part 3 (which ordered by architectural layering, not
-  urgency): types → CI/CD → Sentry + Privacy Manifest → error boundaries
-  → TanStack Query POC (in place, no folder move yet) → feature-folder
-  restructure → remaining TanStack Query migration → **FlashList
-  migration** → Zustand → feature flags (now with a `target_cities`
-  column for city-by-city geo-gating) → PostHog/ATT — 11 steps, not 10.
-  FlashList was originally demoted entirely out of the critical path
-  (Phase 9's own profiling found no jank to fix at current dev-data
-  volume), but a same-day v2.1 revision of the source roadmap
-  (`docs/superpowers/specs/lore-native-foundation-roadmap-v2.1.md`) made
-  an explicit product-priority argument — college-student audience,
-  TikTok/Instagram-trained scroll expectations — for treating it as
-  non-negotiable ahead of launch rather than opportunistic scale
-  headroom; reinstated as Step 8 by deliberate user decision, not new
-  profiling data. Full diff between v1.0 and v2.1, and how each
-  difference was resolved, lives in
-  `docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`.
-  To be worked sequentially in the main session, not via
+  v1.0 source doc). Worked sequentially in the main session, not via
   subagent-driven-development (per the Phase 8 session-cost decision
   below), with `tsc`/`eslint`/relevant Maestro flows re-verified after
-  each step rather than only at the end — this repo's Phase 7 and
-  Phase 9 stale-dev-server incidents are exactly the kind of regression
-  that hides until a final check catches it too late to isolate which
-  step caused it.
+  each step and one commit per step pushed individually to `main` with
+  CI green — this repo's Phase 7 and Phase 9 stale-dev-server incidents
+  are exactly the kind of regression that hides until a final check
+  catches it too late to isolate which step caused it. Step by step:
+  1. **Generated Supabase types** — `src/shared/supabase/database.types.ts`
+     via the Supabase MCP's `generate_typescript_types` (the local
+     `supabase` CLI needs `supabase login`, which isn't available in this
+     environment, so `npm run types:supabase` shells out to MCP output
+     instead of the CLI).
+  2. **CI/CD** — a GitHub Actions workflow running `tsc`/`eslint` on every
+     push to `main`, the "Check" run referenced throughout this section.
+  3. **Sentry + Privacy Manifest** — `Sentry.init()` in `app/_layout.tsx`
+     (empty DSN = supported no-op, see "Required manual setup" above) and
+     `app.json`'s `ios.privacyManifests` block (`NSPrivacyTracking` etc.),
+     both required before App Store submission.
+  4. **Error boundaries** — wrapping every route.
+  5. **TanStack Query POC** — Home feed only, proving the pattern before
+     committing to a full migration.
+  6. **Feature-based folder restructure** — `components/`, `hooks/`,
+     `lib/`, `providers/`, `constants/` moved into `src/features/*` +
+     `src/shared/*`; deliberately deferred splitting `lib/queries.ts`
+     itself to Step 7.
+  7. **Remaining TanStack Query migration** — the `lib/queries.ts` god-file
+     split into per-feature hooks under `src/features/*/hooks`.
+  8. **FlashList migration** — replaced `FlatList` on every list screen.
+     Originally demoted out of the critical path (Phase 9's own profiling
+     found no jank to fix at current dev-data volume), but a same-day
+     v2.1 revision of the source roadmap
+     (`docs/superpowers/specs/lore-native-foundation-roadmap-v2.1.md`)
+     made an explicit product-priority argument — college-student
+     audience, TikTok/Instagram-trained scroll expectations — for
+     treating it as non-negotiable ahead of launch; reinstated as this
+     step by deliberate user decision, not new profiling data.
+  9. **Zustand for auth state** — `src/features/auth/stores/auth-store.ts`
+     replaced the Context-based `AuthProvider` internals (the public
+     `useAuthStore()` shape is a drop-in for the old `useAuthContext()` —
+     16 call sites updated).
+  10. **Feature flags** — `public.feature_flags` table (kill switch,
+      `rollout_percentage`, `target_roles`, `target_cities`, an
+      `enabled_at` lifecycle trigger) plus
+      `src/features/flags/hooks/use-feature-flag.ts` (deterministic
+      hash-bucketed rollout, fail-closed on missing/loading/error). Scope
+      expanded mid-implementation past the original "kill switch +
+      lifecycle" design: `generate_typescript_types` output revealed
+      `profiles.city`/`places.city` already existed in the schema
+      (populated, but unused by any app code) — surfaced to the user
+      rather than silently building a structural-only `target_cities`
+      stub, who chose to wire up real city-based gating instead. See
+      `.claude/skills/feature-flags/SKILL.md` for the operational
+      add/kill/retire workflow.
+  11. **PostHog + ATT** — `posthog-react-native` (EU cloud) via
+      `src/shared/components/analytics-provider.tsx`, which only mounts
+      `PostHogProvider` when `EXPO_PUBLIC_POSTHOG_API_KEY` is set (see
+      "Required manual setup" above) and silences `usePostHog()`'s
+      unconditional "no client in context" `console.error` via
+      `LogBox.ignoreLogs` — the same class of mount-time-warning-covers-
+      the-UI problem this file already documents for
+      `expo-notifications`, found on-device: an empty key produced a
+      dismissible error toast over the tab bar even though the intent was
+      a harmless no-op. `src/shared/hooks/use-tracking-transparency.ts`
+      requests Apple's App Tracking Transparency permission once per
+      signed-in user and opts PostHog in/out accordingly; verified for
+      real via a direct `sqlite3` query against the Simulator's `TCC.db`
+      (`kTCCServiceUserTracking|com.reddyscb.lore|2` after tapping
+      "Allow"). This step also caught a second real, on-device-only bug:
+      adding the `expo-tracking-transparency` plugin to `app.json` without
+      first re-running `expo prebuild` crashed on launch with a missing
+      `NSUserTrackingUsageDescription` — `expo run:ios` alone doesn't
+      resync `app.json` plugin config into an already-generated,
+      gitignored `ios/` folder; fixed by adding the permission string and
+      running `npx expo prebuild --platform ios` explicitly.
 - **Phase 12 — planned, not started.** Store submission prep: production
   build, TestFlight internal → external beta, App Store review
   submission. Depends on Phase 11 (architecture/store-readiness),
@@ -659,11 +702,14 @@ before/README.md` and `comparison.md` rather than silently
 - **Phase 14 — planned, not started.** Content & launch prep. Depends on
   Phase 7 (owner claim flow, `owner_id` column) for the claim-flow
   enhancement below; does not depend on Phase 11 or 13, can start any
-  time. New `places` schema additions (`source`, `is_verified`, `city`,
-  `lat`, `lng`, `instagram_handle`, `claimed_at`, `verified_at`,
+  time. New `places` schema additions (`source`, `is_verified`, `lat`,
+  `lng`, `instagram_handle`, `claimed_at`, `verified_at`,
   `verification_documents` — reusing the existing `owner_id` column
   rather than adding a redundant one, per the schema note in the design
-  doc below) plus indexes for the new `city`/`source` filters and
+  doc below). Note: `places.city` (and `profiles.city`) already exist
+  and are populated — Phase 11 Step 10 discovered this mid-implementation
+  while regenerating Supabase types, so it's dropped from this list;
+  don't re-add it. Plus indexes for the new `city`/`source` filters and
   Phase 13's location queries. Manual curation of 20–30 real Hyderabad
   cafes with photos (one day of content work, not blocked on any
   engineering phase). Owner claim-flow enhancement — **confirmed new
