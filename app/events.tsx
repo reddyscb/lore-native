@@ -1,6 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
@@ -72,16 +73,13 @@ export default function EventsScreen() {
 
   return (
     <ScreenContainer hasHeader padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         data={events}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <PageHeader

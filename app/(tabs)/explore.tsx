@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { TextField } from '@/shared/components/TextField';
 import { Chip } from '@/shared/components/Chip';
@@ -48,16 +49,13 @@ export default function ExploreScreen() {
 
   return (
     <ScreenContainer padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={results}
         keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
         renderItem={renderItem}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <View style={styles.titleRow}>

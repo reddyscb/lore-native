@@ -2,13 +2,13 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { DropCard } from '@/features/drops/components/DropCard';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
@@ -59,15 +59,12 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={drops}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
           <View>
             <View style={styles.titleRow}>

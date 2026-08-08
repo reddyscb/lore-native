@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { PlaceListItem } from '@/features/places/components/PlaceListItem';
@@ -56,14 +57,11 @@ export default function ClaimPlaceScreen() {
 
   return (
     <ScreenContainer hasHeader padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={places}
         keyExtractor={keyExtractor}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
           <PageHeader
             eyebrow="Claim your place"

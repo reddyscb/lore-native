@@ -1,6 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { TextField } from '@/shared/components/TextField';
@@ -50,15 +51,12 @@ export default function NewMessageScreen() {
 
   return (
     <ScreenContainer hasHeader padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={results}
         keyExtractor={keyExtractor}
         keyboardShouldPersistTaps="handled"
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
           <>
             <PageHeader eyebrow="New message" title="Who's the lore for?" />

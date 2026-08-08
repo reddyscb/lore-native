@@ -2,13 +2,13 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
@@ -65,11 +65,17 @@ export default function PassportScreen() {
   const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
   const renderItem = useCallback(
     ({ item }: { item: PlaceSummary }) => (
-      <StampCell
-        place={item}
-        collected={stamped.has(item.id)}
-        onPress={() => router.push(`/place/${item.id}`)}
-      />
+      // FlashList v2 has no `columnWrapperStyle`, so the grid gutter lives on
+      // each cell instead: half the gutter per side here plus half on the
+      // list's own horizontal padding adds back up to a full `spacing.lg`
+      // between columns and at both outer edges.
+      <View style={styles.cellWrap}>
+        <StampCell
+          place={item}
+          collected={stamped.has(item.id)}
+          onPress={() => router.push(`/place/${item.id}`)}
+        />
+      </View>
     ),
     [stamped, router]
   );
@@ -84,18 +90,17 @@ export default function PassportScreen() {
 
   return (
     <ScreenContainer padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
-        columnWrapperStyle={styles.column}
         numColumns={2}
         data={places}
         keyExtractor={keyExtractor}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={
-          <View>
+          // The list's own horizontal padding is halved for the grid gutter,
+          // so the header adds the other half back to stay flush with every
+          // other screen's `spacing.lg` margin.
+          <View style={styles.headerWrap}>
             <View style={styles.titleRow}>
               <View style={styles.titleRowText}>
                 <PageHeader
@@ -161,12 +166,19 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   titleRowText: { flex: 1 },
   list: {
-    paddingHorizontal: spacing.lg,
+    // Half the usual `spacing.lg` edge padding — `cellWrap` supplies the
+    // other half, so the outer edges and the column gutter all land on
+    // `spacing.lg`. (`spacing.sm` is exactly half `spacing.lg`.)
+    paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xl,
   },
-  column: {
-    gap: spacing.lg,
+  cellWrap: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  headerWrap: {
+    paddingHorizontal: spacing.sm,
   },
   cell: {
     flex: 1,

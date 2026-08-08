@@ -4,7 +4,6 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { TextField } from '@/shared/components/TextField';
 import { Chip } from '@/shared/components/Chip';
@@ -70,7 +70,8 @@ function PlacePicker({ onSelect }: { onSelect: (place: PlaceSummary) => void }) 
 
   return (
     <ScreenContainer padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={results}
         keyExtractor={(item) => item.id}

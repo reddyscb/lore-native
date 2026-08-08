@@ -4,7 +4,6 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +11,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -58,7 +58,7 @@ export default function ConversationScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const seenIds = useRef(new Set<string>());
-  const listRef = useRef<FlatList<Message>>(null);
+  const listRef = useRef<FlashListRef<Message>>(null);
 
   useEffect(() => {
     if (!fetchedMessages) return;
@@ -248,8 +248,9 @@ export default function ConversationScreen() {
           </Pressable>
         </View>
 
-        <FlatList
+        <FlashList
           ref={listRef}
+          maintainVisibleContentPosition={{ disabled: true }}
           style={styles.flex}
           contentContainerStyle={styles.list}
           data={messages}
@@ -257,10 +258,6 @@ export default function ConversationScreen() {
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           renderItem={renderItem}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={7}
-          removeClippedSubviews
         />
 
         <View style={styles.composer}>
@@ -325,8 +322,11 @@ const styles = StyleSheet.create({
   },
   headerName: { flex: 1, fontFamily: fontFamily.bodyMedium, fontSize: fontSize.base, color: colors.ink },
   blockLink: { fontFamily: fontFamily.body, fontSize: fontSize.xs, color: colors.danger },
-  list: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
-  bubbleRow: { flexDirection: 'row' },
+  // Inter-bubble spacing lives on the row, not as a contentContainerStyle
+  // `gap` — FlashList positions recycled cells itself, so container gap
+  // isn't a reliable way to space items.
+  list: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  bubbleRow: { flexDirection: 'row', marginBottom: spacing.sm },
   bubbleRowSelf: { justifyContent: 'flex-end' },
   bubbleRowOther: { justifyContent: 'flex-start' },
   bubble: {

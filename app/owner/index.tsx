@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
@@ -52,14 +53,11 @@ export default function OwnerDashboardScreen() {
 
   return (
     <ScreenContainer hasHeader padded={false}>
-      <FlatList
+      <FlashList
+        maintainVisibleContentPosition={{ disabled: true }}
         contentContainerStyle={styles.list}
         data={places}
         keyExtractor={keyExtractor}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={7}
-        removeClippedSubviews
         ListHeaderComponent={<PageHeader eyebrow="Owner's Lore" title="Managing your places" />}
         ListEmptyComponent={
           <Text style={styles.empty}>
@@ -102,10 +100,13 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
-    gap: spacing.md,
   },
   card: {
     gap: spacing.sm,
+    // Row spacing lives here rather than as a contentContainerStyle `gap` —
+    // FlashList positions recycled cells itself, so container gap isn't a
+    // reliable way to space items.
+    marginBottom: spacing.md,
   },
   name: {
     fontFamily: fontFamily.display,
