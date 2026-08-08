@@ -213,7 +213,7 @@ rewrite actually needs:
   RLS scoped to the owning user. `pg_net` (schema `extensions`, moved
   there in a hardening follow-up migration after `get_advisors` flagged it
   in `public`) and `pg_cron` extensions enabled. A `send_expo_push(user_id,
-  title, body, data)` SECURITY DEFINER helper (`search_path = ''`, every
+title, body, data)` SECURITY DEFINER helper (`search_path = ''`, every
   reference schema-qualified — see Postgres security best practices)
   fans out to every token row for that user via `net.http_post` against
   `https://exp.host/--/api/v2/push/send`; pg_net queues the request and
@@ -284,7 +284,7 @@ rewrite actually needs:
   New `components/ui/StarRating.tsx` (read-only when `onChange` is
   omitted, tap-to-set otherwise), reused for dish-rating entry here and
   available for future read-only display. Claiming flips `profiles.role`
-  to `'owner'` *before* the `places.owner_id` update, since the "an owner
+  to `'owner'` _before_ the `places.owner_id` update, since the "an owner
   can claim an unclaimed place" RLS policy's `WITH CHECK` requires
   `role = 'owner'` to already be true — same two-step order the web app's
   `claimPlace` server action uses; a losing racer in the claim race gets a
@@ -316,12 +316,12 @@ rewrite actually needs:
   be wrong, not just incomplete** — worth internalizing for any future
   session in this same setup:
   - **"No Simulator available" was never actually tested.** `xcrun simctl
-    list devices booted` returning nothing only means nothing is
-    *currently* booted, not that nothing *can* be booted. `xcrun simctl
-    boot <device>` worked immediately, first try, no special setup.
+list devices booted` returning nothing only means nothing is
+    _currently_ booted, not that nothing _can_ be booted. `xcrun simctl
+boot <device>` worked immediately, first try, no special setup.
     Simulators here are always available; a session just has to boot one.
   - **A single stale `expo start` process on the default port can silently
-    hijack an entire test run.** A leftover dev server for the *main*
+    hijack an entire test run.** A leftover dev server for the _main_
     repo checkout (unrelated to this worktree, over a day old, from some
     earlier session) was still listening on :8081. Pointing the worktree's
     own Metro at a different port and launching the app didn't stop the
@@ -333,14 +333,14 @@ rewrite actually needs:
     `phase7-owner-dashboard.yaml` failing at "Claim a place" not being on
     the Profile screen at all, because that code doesn't exist on main.
     Fix: kill every other `expo`/Metro process first, then confirm the
-    intended server is the one actually being hit by checking *its own*
+    intended server is the one actually being hit by checking _its own_
     log for a real full bundle (`Bundled ...ms ... (N modules)` with N in
     the hundreds/thousands) after a fresh app launch — a small `(1
-    module)` line is Metro's normal incremental-request cost and does not
+module)` line is Metro's normal incremental-request cost and does not
     by itself prove which server served the app.
-  Running against the real, correctly-connected code surfaced three real
-  bugs invisible to `tsc`/`eslint`/code review, all fixed in this phase
-  before merge:
+    Running against the real, correctly-connected code surfaced three real
+    bugs invisible to `tsc`/`eslint`/code review, all fixed in this phase
+    before merge:
   - `borderStyle: 'dashed'` (used on the manage screen's divider and dish-
     row separator) triggers React Native's "Unsupported dashed / dotted
     border style" warning on this RN version — an uncaught warning that
@@ -422,56 +422,56 @@ rewrite actually needs:
     photo/video send path, since it was only added to the text-send path
     at first — see the Maestro gotcha below for a related, unrelated-root
     -cause tap issue found testing the same screen).
-  **Maestro gotcha, left as a known, deliberately-unfixed flake, not an
-  oversight:** `phase8-messages.yaml`'s final "tap Send" step fails
-  consistently on this Simulator/iOS 26.5 build — iOS's QuickType
-  predictive-suggestion bar (visible once "message" is typed) persists
-  after the composer field blurs, and its touch region overlaps the Send
-  button closely enough that `tapOn` registers a stray keyboard keypress
-  (a literal "O" appended to the draft) instead of the button. Confirmed
-  via a live manual test that sending itself works correctly for a real
-  user with the keyboard open — this is a test-tooling artifact, not an
-  app bug. Five different fixes were tried and every one failed
-  identically: `pressKey: Enter` to blur first, tapping an inert `Text`
-  to blur first (the established fix for a *different*
-  keyboard-still-open gotcha elsewhere in this file — didn't transfer),
-  Maestro's `index`-based tap disambiguation, a raw point-based tap at the
-  button's real center (via `idb ui describe-all` +
-  `idb describe`'s `screen_dimensions`, the same convention this file
-  documents for native `Alert.alert` buttons), and Maestro's `pasteText`
-  in place of `inputText` (not even a valid command in Maestro 2.8.0).
-  If picked back up later, the next thing worth trying is disabling
-  `autoCorrect` on the composer field to suppress the QuickType bar
-  outright — not attempted yet since it changes real user-facing behavior
-  and wasn't confirmed necessary once the live manual test ruled out a
-  real bug. The flow's two earlier steps *did* surface real, fixed
-  issues on the way to this one: the dev seed data genuinely has two
-  distinct profiles both named "sree" (confirmed via a live SQL query,
-  not a rendering artifact) — the same "identical text per row"
-  disambiguation problem as Phase 7's per-place "Manage" buttons, fixed
-  the same way `phase3-compose-and-tag.yaml` already does for this exact
-  query (Maestro's `index` selector); and the search-results tap right
-  after typing needed a keyboard dismiss (`pressKey: Enter`) first, the
-  same established gotcha as `phase3-explore`/`phase7-owner-dashboard`.
-  **Verification:** `npx tsc --noEmit` and `npx eslint . --ext .ts,.tsx`
-  both clean project-wide (only the pre-existing, unrelated
-  `.expo/types/router.d.ts` warning). `npm run test:e2e`: 9 of 12 flows
-  green. The 3 that didn't were checked individually, not assumed to be
-  regressions: `phase8-messages` fails at the known Send-tap flake above;
-  `phase4-events` and `phase7-owner-dashboard` fail for pre-existing,
-  unrelated, already-documented dev-data-state reasons (the seed event's
-  `tickets_total` headroom had already been consumed by earlier runs, and
-  the owner-dashboard test account's `profiles.role`/claim state had
-  already been flipped by an earlier run this session — both call for a
-  data reset or a `tickets_total` bump per this file's own "Regression
-  testing" notes, not a code fix, and neither is unique to this phase).
-  This phase's execution mode changed partway through: Tasks 1–11 used
-  `superpowers:subagent-driven-development` (a fresh implementer subagent
-  plus a task-scoped reviewer subagent per task); Tasks 12–13 were done
-  by the controller directly — no subagent dispatch — per an explicit
-  user request partway through the session to reduce session-usage cost,
-  worth knowing if a future session picks up a similar-sized task list in
-  this repo and the user raises the same concern.
+    **Maestro gotcha, left as a known, deliberately-unfixed flake, not an
+    oversight:** `phase8-messages.yaml`'s final "tap Send" step fails
+    consistently on this Simulator/iOS 26.5 build — iOS's QuickType
+    predictive-suggestion bar (visible once "message" is typed) persists
+    after the composer field blurs, and its touch region overlaps the Send
+    button closely enough that `tapOn` registers a stray keyboard keypress
+    (a literal "O" appended to the draft) instead of the button. Confirmed
+    via a live manual test that sending itself works correctly for a real
+    user with the keyboard open — this is a test-tooling artifact, not an
+    app bug. Five different fixes were tried and every one failed
+    identically: `pressKey: Enter` to blur first, tapping an inert `Text`
+    to blur first (the established fix for a _different_
+    keyboard-still-open gotcha elsewhere in this file — didn't transfer),
+    Maestro's `index`-based tap disambiguation, a raw point-based tap at the
+    button's real center (via `idb ui describe-all` +
+    `idb describe`'s `screen_dimensions`, the same convention this file
+    documents for native `Alert.alert` buttons), and Maestro's `pasteText`
+    in place of `inputText` (not even a valid command in Maestro 2.8.0).
+    If picked back up later, the next thing worth trying is disabling
+    `autoCorrect` on the composer field to suppress the QuickType bar
+    outright — not attempted yet since it changes real user-facing behavior
+    and wasn't confirmed necessary once the live manual test ruled out a
+    real bug. The flow's two earlier steps _did_ surface real, fixed
+    issues on the way to this one: the dev seed data genuinely has two
+    distinct profiles both named "sree" (confirmed via a live SQL query,
+    not a rendering artifact) — the same "identical text per row"
+    disambiguation problem as Phase 7's per-place "Manage" buttons, fixed
+    the same way `phase3-compose-and-tag.yaml` already does for this exact
+    query (Maestro's `index` selector); and the search-results tap right
+    after typing needed a keyboard dismiss (`pressKey: Enter`) first, the
+    same established gotcha as `phase3-explore`/`phase7-owner-dashboard`.
+    **Verification:** `npx tsc --noEmit` and `npx eslint . --ext .ts,.tsx`
+    both clean project-wide (only the pre-existing, unrelated
+    `.expo/types/router.d.ts` warning). `npm run test:e2e`: 9 of 12 flows
+    green. The 3 that didn't were checked individually, not assumed to be
+    regressions: `phase8-messages` fails at the known Send-tap flake above;
+    `phase4-events` and `phase7-owner-dashboard` fail for pre-existing,
+    unrelated, already-documented dev-data-state reasons (the seed event's
+    `tickets_total` headroom had already been consumed by earlier runs, and
+    the owner-dashboard test account's `profiles.role`/claim state had
+    already been flipped by an earlier run this session — both call for a
+    data reset or a `tickets_total` bump per this file's own "Regression
+    testing" notes, not a code fix, and neither is unique to this phase).
+    This phase's execution mode changed partway through: Tasks 1–11 used
+    `superpowers:subagent-driven-development` (a fresh implementer subagent
+    plus a task-scoped reviewer subagent per task); Tasks 12–13 were done
+    by the controller directly — no subagent dispatch — per an explicit
+    user request partway through the session to reduce session-usage cost,
+    worth knowing if a future session picks up a similar-sized task list in
+    this repo and the user raises the same concern.
 - **Phase 9 — done, verified end-to-end** (`npx tsc --noEmit` and
   `npx eslint . --ext .ts,.tsx` clean project-wide; `npm run test:e2e`
   9/12 green, matching Phase 8's own count — see below). A proactive
@@ -496,7 +496,7 @@ rewrite actually needs:
     header/banner/tickets section moved into `ListHeaderComponent`.
   - `expo-image` usages (`Avatar`, `MediaStrip`, café-detail and
     owner-manage dish photos) gained an explicit `cachePolicy=
-    "memory-disk"`; `Avatar` and `MediaStrip` (the two rendered inside
+"memory-disk"`; `Avatar` and `MediaStrip` (the two rendered inside
     scrolling lists) also gained a `recyclingKey` to prevent a recycled
     row briefly showing the previous row's image.
   - `app/_layout.tsx`'s shared `pushedScreenOptions` gained
@@ -508,67 +508,67 @@ rewrite actually needs:
     measurable performance upside, and it would touch the exact
     back-navigation pattern this file's Maestro gotchas section already
     flags as fragile.
-  **Profiling (Tasks 1 and 11 of the plan) found no jank to fix at the
-  current dev-data volume** — Home, café detail, Explore, and the
-  messages thread were all already at a clean 60fps ceiling on both the
-  JS and UI threads before this phase's changes, and stayed there after.
-  `xcrun xctrace` (Time Profiler) was attempted for CPU-level profiling
-  and dropped entirely: it hung indefinitely (12+ minutes on a 3-second
-  recording request, no error) almost certainly waiting on a one-time
-  developer-tools authorization dialog with no way to answer it
-  non-interactively — RN's in-app Perf Monitor overlay (Simulator →
-  Device menu → Shake → "Show Perf Monitor") plus scripted `idb ui swipe`
-  gestures was the only profiling method that actually worked in this
-  environment. Full before/after numbers, screenshots, and an honest
-  write-up (including the caveat below) live in
-  `docs/superpowers/plans/phase9-profiling/`. This phase's real value
-  isn't a measured speedup — the seed data (a handful of drops/places/
-  messages) is too small to produce a dropped frame regardless of
-  `FlatList` tuning — it's scalability headroom (memoized rows won't
-  cascade-re-render once real usage grows list sizes) and image-caching
-  behavior that doesn't show up in an FPS number at all.
-  **A second instance of the Phase 7-documented "stale dev server"
-  gotcha, worse this time:** running the Maestro suite for this phase's
-  own Task 12 verification, all 12 flows failed identically at the very
-  first launch assertion with a red `ConfigError` screen. Cause: a
-  leftover `expo run:ios` process from an unrelated, already-deleted git
-  worktree (`.claude/worktrees/dm-feature`, started hours earlier by a
-  different session) was still holding the installed dev client's
-  bundler connection — Phase 7's "point at the wrong-but-working server"
-  failure mode, except this time the stale server's own project no
-  longer existed, so *every* request to it errored instead of silently
-  serving old code. Worse: because the failure only surfaces on a true
-  cold relaunch (`Stop` + `Launch`, not a Fast Refresh–preserved reload),
-  **all of this phase's manual smoke-testing and the Task 1/Task 11
-  profiling captures earlier in the same session were of uncertain
-  provenance** — they may have been served by that same stale process the
-  whole time. Fixed by killing every stray `expo`/`metro` process,
-  starting a fresh `npx expo start` for this actual checkout, and
-  confirming a real full bundle log
-  (`Bundled 3178ms node_modules/expo-router/entry.js (1505 modules)`)
-  before trusting anything again — then re-running the full Maestro suite
-  and redoing the Task 11 profiling captures against the verified-correct
-  server (documented in `docs/superpowers/plans/phase9-profiling/
-  before/README.md` and `comparison.md` rather than silently
-  overwritten). The practical lesson beyond Phase 7's own: a stale-server
-  hijack isn't always obviously wrong-looking — this one only announced
-  itself on a full cold relaunch, so a session that never does one (e.g.
-  one that only uses Fast Refresh + manual spot-checks, as most of this
-  phase's own early tasks did) can go a long time without noticing.
-  `npm run test:e2e` against the verified-correct server: 9/12 green, the
-  same count as Phase 8's own run and for the same kind of reasons —
-  `phase4-events` failed on an accumulated "Your tickets" list pushing
-  the reserve Stepper off-screen (dev-data accumulation, the same known
-  class CLAUDE.md's "Regression testing" section already describes, just
-  a new symptom of it), `phase7-owner-dashboard` failed because the test
-  account's `profiles.role` was already flipped to `'owner'` from an
-  earlier run this session (the exact documented pre-existing gap), and
-  `phase8-messages` hit the already-documented QuickType-predictive-bar
-  Send-tap flake. None of the three is a regression from this phase's
-  changes. Also refreshed `README.md`'s Phase-1-era "What's real in this
-  build" section and retired its stale "What to check before moving to
-  Phase 2" checklist, which hadn't been touched since Phase 1 and badly
-  undersold everything shipped since.
+    **Profiling (Tasks 1 and 11 of the plan) found no jank to fix at the
+    current dev-data volume** — Home, café detail, Explore, and the
+    messages thread were all already at a clean 60fps ceiling on both the
+    JS and UI threads before this phase's changes, and stayed there after.
+    `xcrun xctrace` (Time Profiler) was attempted for CPU-level profiling
+    and dropped entirely: it hung indefinitely (12+ minutes on a 3-second
+    recording request, no error) almost certainly waiting on a one-time
+    developer-tools authorization dialog with no way to answer it
+    non-interactively — RN's in-app Perf Monitor overlay (Simulator →
+    Device menu → Shake → "Show Perf Monitor") plus scripted `idb ui swipe`
+    gestures was the only profiling method that actually worked in this
+    environment. Full before/after numbers, screenshots, and an honest
+    write-up (including the caveat below) live in
+    `docs/superpowers/plans/phase9-profiling/`. This phase's real value
+    isn't a measured speedup — the seed data (a handful of drops/places/
+    messages) is too small to produce a dropped frame regardless of
+    `FlatList` tuning — it's scalability headroom (memoized rows won't
+    cascade-re-render once real usage grows list sizes) and image-caching
+    behavior that doesn't show up in an FPS number at all.
+    **A second instance of the Phase 7-documented "stale dev server"
+    gotcha, worse this time:** running the Maestro suite for this phase's
+    own Task 12 verification, all 12 flows failed identically at the very
+    first launch assertion with a red `ConfigError` screen. Cause: a
+    leftover `expo run:ios` process from an unrelated, already-deleted git
+    worktree (`.claude/worktrees/dm-feature`, started hours earlier by a
+    different session) was still holding the installed dev client's
+    bundler connection — Phase 7's "point at the wrong-but-working server"
+    failure mode, except this time the stale server's own project no
+    longer existed, so _every_ request to it errored instead of silently
+    serving old code. Worse: because the failure only surfaces on a true
+    cold relaunch (`Stop` + `Launch`, not a Fast Refresh–preserved reload),
+    **all of this phase's manual smoke-testing and the Task 1/Task 11
+    profiling captures earlier in the same session were of uncertain
+    provenance** — they may have been served by that same stale process the
+    whole time. Fixed by killing every stray `expo`/`metro` process,
+    starting a fresh `npx expo start` for this actual checkout, and
+    confirming a real full bundle log
+    (`Bundled 3178ms node_modules/expo-router/entry.js (1505 modules)`)
+    before trusting anything again — then re-running the full Maestro suite
+    and redoing the Task 11 profiling captures against the verified-correct
+    server (documented in `docs/superpowers/plans/phase9-profiling/
+before/README.md` and `comparison.md` rather than silently
+    overwritten). The practical lesson beyond Phase 7's own: a stale-server
+    hijack isn't always obviously wrong-looking — this one only announced
+    itself on a full cold relaunch, so a session that never does one (e.g.
+    one that only uses Fast Refresh + manual spot-checks, as most of this
+    phase's own early tasks did) can go a long time without noticing.
+    `npm run test:e2e` against the verified-correct server: 9/12 green, the
+    same count as Phase 8's own run and for the same kind of reasons —
+    `phase4-events` failed on an accumulated "Your tickets" list pushing
+    the reserve Stepper off-screen (dev-data accumulation, the same known
+    class CLAUDE.md's "Regression testing" section already describes, just
+    a new symptom of it), `phase7-owner-dashboard` failed because the test
+    account's `profiles.role` was already flipped to `'owner'` from an
+    earlier run this session (the exact documented pre-existing gap), and
+    `phase8-messages` hit the already-documented QuickType-predictive-bar
+    Send-tap flake. None of the three is a regression from this phase's
+    changes. Also refreshed `README.md`'s Phase-1-era "What's real in this
+    build" section and retired its stale "What to check before moving to
+    Phase 2" checklist, which hadn't been touched since Phase 1 and badly
+    undersold everything shipped since.
 - **Phase 11 — planned, not started.** Architecture foundation pass. The
   app is feature-complete through Phase 9 but was built linearly by one
   developer: no server-state caching layer, a single god-file data layer
@@ -581,7 +581,7 @@ rewrite actually needs:
   `docs/superpowers/specs/2026-08-07-architecture-foundation-design.md`
   (reviewed sequencing) and
   `docs/superpowers/specs/lore-native-foundation-roadmap.md` (original
-  source doc). Two goals bundled together: (1) architectural
+  v1.0 source doc). Two goals bundled together: (1) architectural
   scalability — generated Supabase types, feature-based folders
   (`src/features/*`), TanStack Query for server state, Zustand for client
   state, error boundaries; (2) store-readiness — this app has never been
@@ -591,21 +591,79 @@ rewrite actually needs:
   source document's Part 3 (which ordered by architectural layering, not
   urgency): types → CI/CD → Sentry + Privacy Manifest → error boundaries
   → TanStack Query POC (in place, no folder move yet) → feature-folder
-  restructure → remaining TanStack Query migration → Zustand → feature
-  flags → PostHog/ATT, with FlashList demoted out of the critical path
-  entirely (Phase 9's own profiling found no jank to fix at current
-  dev-data volume — this is scale headroom, not urgent). Rationale for
-  each reorder is in the design doc. To be worked sequentially in the
-  main session, not via subagent-driven-development (per the Phase 8
-  session-cost decision below), with `tsc`/`eslint`/relevant Maestro
-  flows re-verified after each step rather than only at the end — this
-  repo's Phase 7 and Phase 9 stale-dev-server incidents are exactly the
-  kind of regression that hides until a final check catches it too late
-  to isolate which step caused it.
-- **Phase 12 — planned, not started.** Store submission prep (Part 5/6 of
-  the same source doc): production build, TestFlight internal → external
-  beta, App Store review submission. Depends on Phase 11's store-readiness
-  work (Sentry, Privacy Manifest, CI/CD) landing first.
+  restructure → remaining TanStack Query migration → **FlashList
+  migration** → Zustand → feature flags (now with a `target_cities`
+  column for city-by-city geo-gating) → PostHog/ATT — 11 steps, not 10.
+  FlashList was originally demoted entirely out of the critical path
+  (Phase 9's own profiling found no jank to fix at current dev-data
+  volume), but a same-day v2.1 revision of the source roadmap
+  (`docs/superpowers/specs/lore-native-foundation-roadmap-v2.1.md`) made
+  an explicit product-priority argument — college-student audience,
+  TikTok/Instagram-trained scroll expectations — for treating it as
+  non-negotiable ahead of launch rather than opportunistic scale
+  headroom; reinstated as Step 8 by deliberate user decision, not new
+  profiling data. Full diff between v1.0 and v2.1, and how each
+  difference was resolved, lives in
+  `docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`.
+  To be worked sequentially in the main session, not via
+  subagent-driven-development (per the Phase 8 session-cost decision
+  below), with `tsc`/`eslint`/relevant Maestro flows re-verified after
+  each step rather than only at the end — this repo's Phase 7 and
+  Phase 9 stale-dev-server incidents are exactly the kind of regression
+  that hides until a final check catches it too late to isolate which
+  step caused it.
+- **Phase 12 — planned, not started.** Store submission prep: production
+  build, TestFlight internal → external beta, App Store review
+  submission. Depends on Phase 11 (architecture/store-readiness),
+  Phase 13 (polish — App Store review expects a non-janky app), and
+  Phase 14 (content — no cafe listings and no Privacy Policy URL both
+  block submission). Gained scope in the same v2.1 revision noted above:
+  **Sign in with Apple** — a genuinely new gap not previously anywhere in
+  this plan, surfaced by v2.1's Part 7.4. App Store Guideline 4.8
+  requires offering it whenever a third-party login (Google OAuth, here)
+  is offered, so it's a hard submission blocker, not a nice-to-have.
+  Deliberately kept out of Phase 11's architecture-only scope and placed
+  here instead, alongside legal URLs (Privacy Policy/ToS from Phase 14)
+  and App Store screenshots/description. Full reasoning and the
+  pre-submission checklist live in
+  `docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`.
+- **Phase 13 — planned, not started.** Audience-critical polish. Depends
+  on Phase 11 (offline support and location-aware discovery both build on
+  the TanStack Query layer); does not depend on Phase 14, can run in
+  parallel with it. Image compression pipeline (resize to 1080px +
+  0.8 JPEG compress before every upload — drops, avatar, dish photos,
+  message media), haptics + skeleton screens on primary actions, offline
+  support (TanStack Query persistence + a Zustand-backed mutation queue
+  processed on reconnect), location-aware discovery (`expo-location` +
+  a new `nearby_places` PostGIS RPC — schema change, via the
+  `supabase-migration` skill), MMKV for non-session local storage
+  (search history, feature-flag cache — session storage stays on the
+  existing `expo-secure-store` + AES pattern), biometric auth gating
+  owner-dashboard destructive actions, and shared-element transitions
+  (café card → detail). This is everything from the source roadmap's
+  Post-Foundation Enhancements except FlashList, which moved into
+  Phase 11 (see above). Full step-by-step plan in
+  `docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`.
+- **Phase 14 — planned, not started.** Content & launch prep. Depends on
+  Phase 7 (owner claim flow, `owner_id` column) for the claim-flow
+  enhancement below; does not depend on Phase 11 or 13, can start any
+  time. New `places` schema additions (`source`, `is_verified`, `city`,
+  `lat`, `lng`, `instagram_handle`, `claimed_at`, `verified_at`,
+  `verification_documents` — reusing the existing `owner_id` column
+  rather than adding a redundant one, per the schema note in the design
+  doc below) plus indexes for the new `city`/`source` filters and
+  Phase 13's location queries. Manual curation of 20–30 real Hyderabad
+  cafes with photos (one day of content work, not blocked on any
+  engineering phase). Owner claim-flow enhancement — **confirmed new
+  scope, not something already built in Phase 7**: document upload
+  (business registration/GST/menu photos, new owner-scoped Storage
+  bucket) plus an admin-reviewed approval step before `is_verified`
+  flips to `true`; Phase 7 as shipped is a one-tap claim with neither.
+  Also: an OSM bulk-import path documented for future multi-city
+  expansion (not built speculatively now), a content moderation policy
+  per content type, and Terms of Service + Privacy Policy drafted to
+  public URLs Phase 12 links from App Store Connect. Full plan in
+  `docs/superpowers/specs/2026-08-07-phase12-14-roadmap-revision-design.md`.
 
 Android setup, testing, and Play Store submission are deliberately
 deferred until the iOS app is in a good place.
@@ -679,6 +737,7 @@ at an early step rather than silently duplicating data.
 
 **Gotchas hit building this suite, worth knowing before writing more
 flows:**
+
 - Maestro's text selectors are anchored (exact match), not substring —
   our tab bar items and place-card headers expose composite accessibility
   labels (`"Profile, tab, 5 of 5"`, `"The Copper Pot, Gachibowli, Open"`),
@@ -709,17 +768,17 @@ flows:**
   Both looked like `assertVisible` failures with no indication the tap
   itself misfired — the debug screenshot was the only way to see it. Fix:
   dismiss the keyboard before that tap. For a single-line field, `pressKey:
-  Enter` works (RN's default `blurOnSubmit`). For a multiline field (Enter
+Enter` works (RN's default `blurOnSubmit`). For a multiline field (Enter
   inserts a newline instead), tap a plain, non-interactive `Text` on screen
   instead — `keyboardShouldPersistTaps="handled"` only protects touches on
-  *interactive* elements from dismissing the keyboard, so a tap on inert
+  _interactive_ elements from dismissing the keyboard, so a tap on inert
   text still blurs and dismisses normally. `hideKeyboard` (above) does not
   fix this — it fails outright when tried here.
 - **Native photo/video picker sheets can't be driven by Maestro** — found
   writing Phase 5's flow. `expo-image-picker`'s library sheet is OS UI, not
   app UI, same category of limitation as Google OAuth's browser sheet (see
   "Auth architecture" above). `phase5-media.yaml` only asserts the picker
-  *button* renders; actually picking a photo/video stays a manual Simulator
+  _button_ renders; actually picking a photo/video stays a manual Simulator
   check (seed a test photo/video into its library first via
   `xcrun simctl addmedia <udid> <path>` — a few seconds of
   `xcrun simctl io <udid> recordVideo out.mov` makes a throwaway test video
@@ -734,8 +793,8 @@ flows:**
   wrapping the tap. Root cause: `expo-notifications` itself calls
   `console.warn` on every launch on Simulator ("obtaining a push token
   may not work..."), which surfaces React Native's "Open debugger to
-  view warnings" banner — and that banner renders *directly over the tab
-  bar* and doesn't auto-dismiss. A tap landing there gets swallowed
+  view warnings" banner — and that banner renders _directly over the tab
+  bar_ and doesn't auto-dismiss. A tap landing there gets swallowed
   regardless of whether it's delivered by Maestro, `idb`, or (per a
   timed repro) a real touch — it's not Maestro-specific and it isn't
   timing-sensitive in the way it first looks (a 7-second wait before the
@@ -745,7 +804,7 @@ flows:**
   the tell — a same-cause investigation should watch for "only the tab
   bar breaks, everything else on the same screen is fine." Fixed via
   `LogBox.ignoreLogs(...)` in `hooks/use-push-notifications.ts` (see
-  Phase 6 above); worth remembering for *any* future mount-time
+  Phase 6 above); worth remembering for _any_ future mount-time
   `console.warn`, not just this one. Two unrelated flows were also
   hardened while diagnosing this: `phase3-reply` and `phase4-collections`
   had fixed, un-scrolled assumptions about where their target element
@@ -772,7 +831,7 @@ flows:**
   one Maestro's accessibility walk finds first, not necessarily the place
   the flow just claimed. Fixed with Maestro's relative-selector syntax
   (new to this repo's flows): `tapOn: { text: "Manage", below:
-  ".*<place name>.*" }` scopes the tap to the "Manage" button positioned
+".*<place name>.*" }` scopes the tap to the "Manage" button positioned
   below that specific place's name text. The same technique applies to any
   other screen with N visually-identical buttons in a list.
 - **`tapOn` by text can silently fail to dismiss a native
@@ -781,7 +840,7 @@ flows:**
   against the destructive button in a native `UIAlertController`
   consistently left the dialog open (reproduced 3 times in a row,
   screenshot showed the same "Remove this dish?" alert every time), yet
-  Maestro never reported a failure on that step — only the *next*
+  Maestro never reported a failure on that step — only the _next_
   assertion failed, elsewhere on screen, which is what made it look at
   first like a delete-didn't-complete bug rather than a tap-didn't-land
   bug. Confirmed the real cause by comparing against a manual coordinate
@@ -804,7 +863,7 @@ flows:**
   bar can keep rendering — and keep intercepting taps in its screen
   region — even after `pressKey: Enter` blurs the field or a
   keyboard-dismissing tap on inert `Text` runs first (the two fixes that
-  *do* work for the "keyboard still open" gotcha earlier in this list).
+  _do_ work for the "keyboard still open" gotcha earlier in this list).
   If a fixed-position button (like a composer's Send button) sits close
   enough to where that bar renders, `tapOn` on the button registers a
   stray keyboard keypress instead — confirmed via the accessibility
@@ -816,7 +875,7 @@ flows:**
   keyboard open. Five fixes were tried, all failed identically: blur via
   Enter, blur via an inert-`Text` tap, Maestro's `index` disambiguation,
   a raw point-based tap at the button's true center (the same technique
-  that *does* work for the native `Alert.alert` gotcha above — didn't
+  that _does_ work for the native `Alert.alert` gotcha above — didn't
   transfer here), and Maestro's `pasteText` in place of `inputText`
   (which turned out not to be a valid command in Maestro 2.8.0 at all).
   Left as a documented, deliberately-unfixed known gap in
@@ -827,7 +886,7 @@ flows:**
 **Real bugs this suite caught, not just test flakiness:** the Explore
 tab, Post tab's place picker, and café detail's reply box were all
 missing `keyboardShouldPersistTaps="handled"` on their scrollable
-container. Without it, the *first* tap on a result/button right after
+container. Without it, the _first_ tap on a result/button right after
 typing just dismisses the keyboard instead of registering — a real user
 tapping a search result immediately after typing would need to tap twice.
 Fixed in all three screens. Phase 6 added one more: `expo-notifications`'s
