@@ -3,7 +3,16 @@ import { LogBox } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { registerPushToken } from '@/shared/api/queries';
+import { supabase } from '@/shared/supabase/supabase';
+
+/** Registers (or re-registers) this device's Expo push token for a user. */
+async function registerPushToken(userId: string, token: string): Promise<void> {
+  const { error } = await supabase
+    .from('push_tokens')
+    .upsert({ user_id: userId, token }, { onConflict: 'user_id,token', ignoreDuplicates: true });
+
+  if (error) throw error;
+}
 
 // expo-notifications itself (not just our own catch below) calls
 // console.warn with this on every launch on the iOS Simulator — that's

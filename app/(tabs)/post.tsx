@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -23,14 +23,12 @@ import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
 import { useCreateDrop } from '@/features/drops/hooks/use-create-drop';
-import {
-  fetchPlace,
-  searchPlaces,
-  searchProfiles,
-  type PickedMedia,
-  type PlaceSummary,
-  type ProfileSearchResult,
-} from '@/shared/api/queries';
+import { usePlace } from '@/features/places/hooks/use-place';
+import { useSearchPlaces } from '@/features/places/hooks/use-search-places';
+import { useSearchProfiles } from '@/features/auth/hooks/use-search-profiles';
+import type { PickedMedia } from '@/shared/api/media';
+import type { PlaceSummary } from '@/features/places/api/places';
+import type { ProfileSearchResult } from '@/features/auth/api/profiles';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -43,33 +41,32 @@ export default function PostScreen() {
   const { placeId } = useLocalSearchParams<{ placeId?: string }>();
   const authorId = profile?.id ?? session?.user?.id ?? '';
 
-  const [place, setPlace] = useState<PlaceSummary | null>(null);
-
-  useEffect(() => {
-    if (placeId) {
-      fetchPlace(placeId).then(setPlace);
-    }
-  }, [placeId]);
+  const [selectedPlace, setSelectedPlace] = useState<PlaceSummary | null>(null);
+  // Once the user backs out to the picker, stop re-resolving `placeId` —
+  // otherwise the prefilled place would keep winning over "Change".
+  const [pickerRequested, setPickerRequested] = useState(false);
+  const { data: prefilledPlace } = usePlace(!selectedPlace && !pickerRequested ? placeId : undefined);
+  const place = selectedPlace ?? (pickerRequested ? null : (prefilledPlace ?? null));
 
   if (!place) {
-    return <PlacePicker onSelect={setPlace} />;
+    return <PlacePicker onSelect={setSelectedPlace} />;
   }
 
-  return <ComposeForm place={place} authorId={authorId} onChangePlace={() => setPlace(null)} />;
+  return (
+    <ComposeForm
+      place={place}
+      authorId={authorId}
+      onChangePlace={() => {
+        setSelectedPlace(null);
+        setPickerRequested(true);
+      }}
+    />
+  );
 }
 
 function PlacePicker({ onSelect }: { onSelect: (place: PlaceSummary) => void }) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    const timeout = setTimeout(() => {
-      searchPlaces({ query }).then(setResults).finally(() => setLoading(false));
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [query]);
+  const { results, loading } = useSearchPlaces({ query });
 
   return (
     <ScreenContainer padded={false}>
@@ -135,7 +132,7 @@ function ComposeForm({
   const router = useRouter();
   const [fields, setFields] = useState<FormFields>(EMPTY_FORM);
   const [friendQuery, setFriendQuery] = useState('');
-  const [friendResults, setFriendResults] = useState<ProfileSearchResult[]>([]);
+  const { results: friendResults } = useSearchProfiles(friendQuery, authorId);
   const [taggedFriends, setTaggedFriends] = useState<ProfileSearchResult[]>([]);
   const [media, setMedia] = useState<PickedMediaItem[]>([]);
   const createDropMutation = useCreateDrop();
@@ -171,17 +168,6 @@ function ComposeForm({
     setMedia((prev) => prev.filter((item) => item.id !== id));
   }
 
-  useEffect(() => {
-    if (!friendQuery.trim() || !authorId) {
-      setFriendResults([]);
-      return;
-    }
-    const timeout = setTimeout(() => {
-      searchProfiles(friendQuery, authorId).then(setFriendResults);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [friendQuery, authorId]);
-
   const hasContent =
     media.length > 0 ||
     Object.entries(fields).some(([key, value]) => key !== 'damage' && value.trim().length > 0);
@@ -195,7 +181,6 @@ function ComposeForm({
       prev.some((p) => p.id === person.id) ? prev.filter((p) => p.id !== person.id) : [...prev, person]
     );
     setFriendQuery('');
-    setFriendResults([]);
   }
 
   async function onSubmit() {
@@ -330,7 +315,7 @@ function ComposeForm({
             onChangeText={setFriendQuery}
             style={styles.field}
           />
-          {friendResults.length > 0 && (
+          {friendQuery.trim() && friendResults.length > 0 && (
             <View style={styles.chipRow}>
               {friendResults.map((f) => (
                 <Chip key={f.id} label={f.display_name ?? 'Someone'} onPress={() => toggleFriend(f)} />

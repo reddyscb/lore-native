@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -7,26 +7,24 @@ import { Card } from '@/shared/components/Card';
 import { Avatar } from '@/shared/components/Avatar';
 import { Button } from '@/shared/components/Button';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { fetchConversations, type Conversation } from '@/features/messages/api/messages';
+import { useConversations } from '@/features/messages/hooks/use-conversations';
+import type { Conversation } from '@/features/messages/api/messages';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function MessagesInboxScreen() {
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const {
+    data: conversations = [],
+    isLoading: loading,
+    isError: loadError,
+    refetch,
+  } = useConversations();
 
   useFocusEffect(
     useCallback(() => {
-      fetchConversations()
-        .then((data) => {
-          setConversations(data);
-          setLoadError(false);
-        })
-        .catch(() => setLoadError(true))
-        .finally(() => setLoading(false));
-    }, [])
+      refetch();
+    }, [refetch])
   );
 
   const keyExtractor = useCallback((item: Conversation) => item.id, []);

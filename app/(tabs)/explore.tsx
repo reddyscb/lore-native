@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -7,7 +7,9 @@ import { Chip } from '@/shared/components/Chip';
 import { PlaceListItem } from '@/features/places/components/PlaceListItem';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { searchPlaces, type PlaceSummary } from '@/shared/api/queries';
+import { usePlaceList } from '@/features/places/hooks/use-place-list';
+import { useSearchPlaces } from '@/features/places/hooks/use-search-places';
+import type { PlaceSummary } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -18,32 +20,18 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const [area, setArea] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState<string | null>(null);
-  const [allAreas, setAllAreas] = useState<string[]>([]);
-  const [results, setResults] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    searchPlaces({}).then((places) => {
-      const areas = [...new Set(places.map((p) => p.area).filter((a): a is string => !!a))];
-      setAllAreas(areas.sort());
-    });
-  }, []);
+  const { data: allPlaces = [] } = usePlaceList();
+  const allAreas = useMemo(
+    () => [...new Set(allPlaces.map((p) => p.area).filter((a): a is string => !!a))].sort(),
+    [allPlaces]
+  );
 
-  const runSearch = useCallback(() => {
-    setLoading(true);
-    searchPlaces({ query, area: area ?? undefined, priceRange: priceRange ?? undefined })
-      .then(setResults)
-      .finally(() => setLoading(false));
-  }, [query, area, priceRange]);
-
-  useEffect(() => {
-    // Show the spinner immediately on keystroke rather than waiting for the
-    // debounce to elapse — otherwise typing looks like it does nothing for
-    // the first 300ms.
-    setLoading(true);
-    const timeout = setTimeout(runSearch, 300);
-    return () => clearTimeout(timeout);
-  }, [runSearch]);
+  const { results, loading } = useSearchPlaces({
+    query,
+    area: area ?? undefined,
+    priceRange: priceRange ?? undefined,
+  });
 
   const availablePrices = useMemo(
     () => PRICE_RANGES.filter((p) => results.some((r) => r.price_range === p) || p === priceRange),

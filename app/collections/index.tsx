@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -6,7 +6,8 @@ import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchCollections, type CollectionWithCount } from '@/shared/api/queries';
+import { useCollections } from '@/features/collections/hooks/use-collections';
+import type { CollectionWithCount } from '@/features/collections/api/collections';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -15,17 +16,14 @@ export default function CollectionsScreen() {
   const { profile, session } = useAuthContext();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
-  const [collections, setCollections] = useState<CollectionWithCount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: collections = [], isLoading: loading, refetch } = useCollections(ownerId || undefined);
 
   // Re-read on focus so a place saved from a café page shows up on return.
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
-      fetchCollections(ownerId)
-        .then(setCollections)
-        .finally(() => setLoading(false));
-    }, [ownerId])
+      refetch();
+    }, [ownerId, refetch])
   );
 
   const keyExtractor = useCallback((item: CollectionWithCount) => item.id, []);

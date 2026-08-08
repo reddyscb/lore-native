@@ -8,7 +8,7 @@ import { Avatar } from '@/shared/components/Avatar';
 import { MediaStrip } from '@/shared/components/MediaStrip';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { formatRelativeTime } from '@/shared/utils/format';
-import type { Drop } from '@/shared/api/queries';
+import type { Drop } from '@/features/drops/api/drops';
 
 type Props = {
   drop: Drop;

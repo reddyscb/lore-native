@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
@@ -20,18 +20,15 @@ import { TextField } from '@/shared/components/TextField';
 import { Button } from '@/shared/components/Button';
 import { StarRating } from '@/features/owner/components/StarRating';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import {
-  fetchPlace,
-  fetchDishes,
-  updatePlaceStatus,
-  updatePlaceTagline,
-  updateDish,
-  deleteDish,
-  uploadDishPhoto,
-  addDish,
-  type Place,
-  type Dish,
-} from '@/shared/api/queries';
+import { usePlace } from '@/features/places/hooks/use-place';
+import { useDishes } from '@/features/places/hooks/use-dishes';
+import { useUpdatePlaceStatus } from '@/features/owner/hooks/use-update-place-status';
+import { useUpdatePlaceTagline } from '@/features/owner/hooks/use-update-place-tagline';
+import { useAddDish } from '@/features/owner/hooks/use-add-dish';
+import { useUpdateDish } from '@/features/owner/hooks/use-update-dish';
+import { useDeleteDish } from '@/features/owner/hooks/use-delete-dish';
+import { useUploadDishPhoto } from '@/features/owner/hooks/use-upload-dish-photo';
+import type { Dish } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -44,22 +41,36 @@ const STATUSES: { id: string; label: string }[] = [
 export default function ManagePlaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [place, setPlace] = useState<Place | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [placeNotFound, setPlaceNotFound] = useState(false);
+  const {
+    data: place,
+    isLoading: placeLoading,
+    isError: placeNotFound,
+    refetch: refetchPlace,
+  } = usePlace(id);
+  const { data: dishes = [], refetch: refetchDishes } = useDishes(id);
+  const loading = placeLoading;
 
   const [status, setStatus] = useState('open');
   const [reopenDate, setReopenDate] = useState('');
-  const [savingStatus, setSavingStatus] = useState(false);
   const [statusSaved, setStatusSaved] = useState(false);
+  const updateStatusMutation = useUpdatePlaceStatus();
 
   const [tagline, setTagline] = useState('');
-  const [savingTagline, setSavingTagline] = useState(false);
   const [taglineSaved, setTaglineSaved] = useState(false);
+  const updateTaglineMutation = useUpdatePlaceTagline();
 
-  const [dishes, setDishes] = useState<Dish[]>([]);
   const [newDishName, setNewDishName] = useState('');
-  const [addingDish, setAddingDish] = useState(false);
+  const addDishMutation = useAddDish();
+
+  // Seed the editable form fields whenever the underlying place data
+  // changes (first load, or a value that actually differs from what's
+  // cached) — matches the prior fetch-and-reset-on-focus behavior.
+  useEffect(() => {
+    if (!place) return;
+    setStatus(place.status);
+    setReopenDate(place.reopen_date ?? '');
+    setTagline(place.tagline ?? '');
+  }, [place]);
 
   // Re-fetch on focus (e.g. returning here after editing elsewhere) —
   // `loading` only gates the very first load, so later focuses refresh in
@@ -68,59 +79,47 @@ export default function ManagePlaceScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
-      Promise.all([fetchPlace(id), fetchDishes(id)])
-        .then(([placeData, dishData]) => {
-          setPlace(placeData);
-          setPlaceNotFound(false);
-          setStatus(placeData.status);
-          setReopenDate(placeData.reopen_date ?? '');
-          setTagline(placeData.tagline ?? '');
-          setDishes(dishData);
-        })
-        .catch(() => setPlaceNotFound(true))
-        .finally(() => setLoading(false));
-    }, [id])
+      refetchPlace();
+      refetchDishes();
+    }, [id, refetchPlace, refetchDishes])
   );
 
   async function onSaveStatus() {
     if (!id) return;
-    setSavingStatus(true);
     try {
-      await updatePlaceStatus(id, status, status === 'temp-closed' ? reopenDate.trim() || null : null);
+      await updateStatusMutation.mutateAsync({
+        placeId: id,
+        status,
+        reopenDate: status === 'temp-closed' ? reopenDate.trim() || null : null,
+      });
       setStatusSaved(true);
     } catch (error) {
       Alert.alert('Could not update status', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setSavingStatus(false);
     }
   }
+  const savingStatus = updateStatusMutation.isPending;
 
   async function onSaveTagline() {
     if (!id) return;
-    setSavingTagline(true);
     try {
-      await updatePlaceTagline(id, tagline.trim() || null);
+      await updateTaglineMutation.mutateAsync({ placeId: id, tagline: tagline.trim() || null });
       setTaglineSaved(true);
     } catch (error) {
       Alert.alert('Could not save', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setSavingTagline(false);
     }
   }
+  const savingTagline = updateTaglineMutation.isPending;
 
   async function onAddDish() {
-    if (!id || !newDishName.trim() || addingDish) return;
-    setAddingDish(true);
+    if (!id || !newDishName.trim() || addDishMutation.isPending) return;
     try {
-      const dish = await addDish(id, { name: newDishName.trim() });
-      setDishes((prev) => [...prev, dish]);
+      await addDishMutation.mutateAsync({ placeId: id, fields: { name: newDishName.trim() } });
       setNewDishName('');
     } catch (error) {
       Alert.alert('Could not add dish', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setAddingDish(false);
     }
   }
+  const addingDish = addDishMutation.isPending;
 
   if (loading || !place) {
     return (
@@ -203,25 +202,7 @@ export default function ManagePlaceScreen() {
 
           <Text style={styles.sectionLabel}>Menu</Text>
           {dishes.map((dish) => (
-            <DishRow
-              key={dish.id}
-              dish={dish}
-              placeId={id}
-              onChange={(updated) =>
-                setDishes((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
-              }
-              onDelete={async (dishId) => {
-                try {
-                  await deleteDish(dishId);
-                  setDishes((prev) => prev.filter((d) => d.id !== dishId));
-                } catch (error) {
-                  Alert.alert(
-                    'Could not remove dish',
-                    error instanceof Error ? error.message : 'Something went wrong.'
-                  );
-                }
-              }}
-            />
+            <DishRow key={dish.id} dish={dish} placeId={id} />
           ))}
 
           <View style={styles.addDishRow}>
@@ -241,25 +222,17 @@ export default function ManagePlaceScreen() {
   );
 }
 
-function DishRow({
-  dish,
-  placeId,
-  onChange,
-  onDelete,
-}: {
-  dish: Dish;
-  placeId: string;
-  onChange: (dish: Dish) => void;
-  onDelete: (dishId: string) => void;
-}) {
+function DishRow({ dish, placeId }: { dish: Dish; placeId: string }) {
   const [name, setName] = useState(dish.name);
   const [tag, setTag] = useState(dish.tag ?? '');
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const updateDishMutation = useUpdateDish();
+  const deleteDishMutation = useDeleteDish();
+  const uploadDishPhotoMutation = useUploadDishPhoto();
+  const uploadingPhoto = uploadDishPhotoMutation.isPending;
 
   async function saveField(fields: { name?: string; tag?: string | null; rating?: number | null }) {
     try {
-      await updateDish(dish.id, fields);
-      onChange({ ...dish, ...fields });
+      await updateDishMutation.mutateAsync({ placeId, dishId: dish.id, fields });
     } catch (error) {
       Alert.alert('Could not save dish', error instanceof Error ? error.message : 'Something went wrong.');
     }
@@ -280,25 +253,34 @@ function DishRow({
     if (result.canceled) return;
     const asset = result.assets[0];
 
-    setUploadingPhoto(true);
     try {
-      const url = await uploadDishPhoto(dish.id, placeId, {
-        uri: asset.uri,
-        mediaType: 'image',
-        mimeType: asset.mimeType ?? 'image/jpeg',
+      await uploadDishPhotoMutation.mutateAsync({
+        dishId: dish.id,
+        placeId,
+        media: { uri: asset.uri, mediaType: 'image', mimeType: asset.mimeType ?? 'image/jpeg' },
       });
-      onChange({ ...dish, photo_url: url });
     } catch (error) {
       Alert.alert('Could not upload photo', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setUploadingPhoto(false);
     }
   }
 
   function onConfirmDelete() {
     Alert.alert('Remove this dish?', dish.name, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => onDelete(dish.id) },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteDishMutation.mutateAsync({ placeId, dishId: dish.id });
+          } catch (error) {
+            Alert.alert(
+              'Could not remove dish',
+              error instanceof Error ? error.message : 'Something went wrong.'
+            );
+          }
+        },
+      },
     ]);
   }
 

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createDrop, tagProfilesOnDrop, uploadDropMedia } from '@/shared/api/queries';
-import type { NewDropInput, PickedMedia } from '@/shared/api/queries';
+import { createDrop, tagProfilesOnDrop, uploadDropMedia } from '@/features/drops/api/drops';
+import type { NewDropInput } from '@/features/drops/api/drops';
+import type { PickedMedia } from '@/shared/api/media';
 import { dropFeedKey } from '@/features/drops/hooks/use-drop-feed';
 
 type CreateDropArgs = {

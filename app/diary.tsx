@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -6,7 +6,8 @@ import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchDiaryEntries, type DiaryEntry } from '@/shared/api/queries';
+import { useDiaryEntries } from '@/features/passport/hooks/use-diary-entries';
+import type { DiaryEntry } from '@/features/passport/api/passport';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -14,16 +15,13 @@ export default function DiaryScreen() {
   const { profile, session } = useAuthContext();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
-  const [entries, setEntries] = useState<DiaryEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: entries = [], isLoading: loading, refetch } = useDiaryEntries(ownerId || undefined);
 
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
-      fetchDiaryEntries(ownerId)
-        .then(setEntries)
-        .finally(() => setLoading(false));
-    }, [ownerId])
+      refetch();
+    }, [ownerId, refetch])
   );
 
   const keyExtractor = useCallback((item: DiaryEntry) => item.id, []);

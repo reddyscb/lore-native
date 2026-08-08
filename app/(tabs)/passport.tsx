@@ -16,7 +16,9 @@ import { Button } from '@/shared/components/Button';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchStampedPlaceIds, searchPlaces, type PlaceSummary } from '@/shared/api/queries';
+import { usePlaceList } from '@/features/places/hooks/use-place-list';
+import { useStampedPlaceIds } from '@/features/passport/hooks/use-stamped-place-ids';
+import type { PlaceSummary } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -26,9 +28,13 @@ export default function PassportScreen() {
   const ownerId = profile?.id ?? session?.user?.id ?? '';
   const { stamped: justStamped } = useLocalSearchParams<{ stamped?: string }>();
 
-  const [places, setPlaces] = useState<PlaceSummary[]>([]);
-  const [stamped, setStamped] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const { data: places = [], isLoading: placesLoading, refetch: refetchPlaces } = usePlaceList();
+  const {
+    data: stamped = new Set<string>(),
+    isLoading: stampedLoading,
+    refetch: refetchStamped,
+  } = useStampedPlaceIds(ownerId || undefined);
+  const loading = placesLoading || stampedLoading;
   const [refreshing, setRefreshing] = useState(false);
   const [showStampedToast, setShowStampedToast] = useState(false);
 
@@ -42,28 +48,19 @@ export default function PassportScreen() {
     return () => clearTimeout(timeout);
   }, [justStamped, router]);
 
-  const load = useCallback(async () => {
-    if (!ownerId) return;
-    const [allPlaces, stampedIds] = await Promise.all([
-      searchPlaces({}),
-      fetchStampedPlaceIds(ownerId),
-    ]);
-    setPlaces(allPlaces);
-    setStamped(stampedIds);
-  }, [ownerId]);
-
   // Re-read on focus so a stamp collected via check-in shows up on the way back.
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
-    }, [load])
+      refetchPlaces();
+      refetchStamped();
+    }, [refetchPlaces, refetchStamped])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await Promise.all([refetchPlaces(), refetchStamped()]);
     setRefreshing(false);
-  }, [load]);
+  }, [refetchPlaces, refetchStamped]);
 
   const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
   const renderItem = useCallback(

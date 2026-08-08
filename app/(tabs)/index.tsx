@@ -14,7 +14,7 @@ import { DropCard } from '@/features/drops/components/DropCard';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useDropFeed } from '@/features/drops/hooks/use-drop-feed';
-import type { Drop } from '@/shared/api/queries';
+import type { Drop } from '@/features/drops/api/drops';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -7,8 +7,9 @@ import { TextField } from '@/shared/components/TextField';
 import { Avatar } from '@/shared/components/Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { searchProfiles, type ProfileSearchResult } from '@/shared/api/queries';
-import { getOrCreateDirectConversation } from '@/features/messages/api/messages';
+import { useSearchProfiles } from '@/features/auth/hooks/use-search-profiles';
+import { useGetOrCreateConversation } from '@/features/messages/hooks/use-get-or-create-conversation';
+import type { ProfileSearchResult } from '@/features/auth/api/profiles';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -18,26 +19,16 @@ export default function NewMessageScreen() {
   const selfId = profile?.id ?? session?.user?.id ?? '';
 
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ProfileSearchResult[]>([]);
+  const { results } = useSearchProfiles(query, selfId);
   const [startingId, setStartingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!query.trim() || !selfId) {
-      setResults([]);
-      return;
-    }
-    const timeout = setTimeout(() => {
-      searchProfiles(query, selfId).then(setResults);
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [query, selfId]);
+  const getOrCreateConversationMutation = useGetOrCreateConversation();
 
   const onSelect = useCallback(
     async (otherUserId: string) => {
       if (startingId) return;
       setStartingId(otherUserId);
       try {
-        const conversationId = await getOrCreateDirectConversation(otherUserId);
+        const conversationId = await getOrCreateConversationMutation.mutateAsync(otherUserId);
         // replace, not push: backing out of a freshly started thread should
         // return to the inbox, not back to this search screen.
         router.replace(`/messages/${conversationId}`);
@@ -46,7 +37,7 @@ export default function NewMessageScreen() {
         setStartingId(null);
       }
     },
-    [startingId, router]
+    [startingId, getOrCreateConversationMutation, router]
   );
 
   const keyExtractor = useCallback((item: ProfileSearchResult) => item.id, []);

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '@/shared/components/Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { formatRelativeTime } from '@/shared/utils/format';
-import type { DropReply } from '@/shared/api/queries';
+import type { DropReply } from '@/features/drops/api/drops';
 
 type Props = {
   reply: DropReply;

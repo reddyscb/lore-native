@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/shared/components/Card';
 import { StatusBadge } from '@/shared/components/StatusBadge';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import type { PlaceSummary } from '@/shared/api/queries';
+import type { PlaceSummary } from '@/features/places/api/places';
 
 type Props = {
   place: PlaceSummary;

@@ -21,17 +21,14 @@ import { MediaStrip } from '@/shared/components/MediaStrip';
 import { colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
 import { useMessagesRealtime } from '@/features/messages/hooks/use-messages-realtime';
-import {
-  blockUser,
-  deleteMessage,
-  fetchConversation,
-  fetchMessages,
-  markConversationRead,
-  sendMessage,
-  sendMessageMedia,
-  type Conversation,
-  type Message,
-} from '@/features/messages/api/messages';
+import { useConversation } from '@/features/messages/hooks/use-conversation';
+import { useMessages } from '@/features/messages/hooks/use-messages';
+import { useSendMessage } from '@/features/messages/hooks/use-send-message';
+import { useSendMessageMedia } from '@/features/messages/hooks/use-send-message-media';
+import { useMarkConversationRead } from '@/features/messages/hooks/use-mark-conversation-read';
+import { useDeleteMessage } from '@/features/messages/hooks/use-delete-message';
+import { useBlockUser } from '@/features/messages/hooks/use-block-user';
+import type { Message } from '@/features/messages/api/messages';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -41,37 +38,53 @@ export default function ConversationScreen() {
   const { profile, session } = useAuthContext();
   const selfId = profile?.id ?? session?.user?.id ?? '';
 
-  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const {
+    data: conversation = null,
+    isLoading: conversationLoading,
+    refetch: refetchConversation,
+  } = useConversation(conversationId);
+  const {
+    data: fetchedMessages,
+    isLoading: messagesLoading,
+    refetch: refetchMessages,
+  } = useMessages(conversationId);
+  const loading = conversationLoading || messagesLoading;
+
+  // Local, imperatively-managed list: sends and realtime inserts append here
+  // directly (see the DM design spec's "no optimistic temp-id" decision, and
+  // the seenIds dedup guard below for the real races that decision leaves).
+  // `fetchedMessages` reseeds this list wholesale whenever a query/refetch
+  // finds genuinely different data — first load, focus, or app-foreground.
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendingMedia, setSendingMedia] = useState(false);
   const seenIds = useRef(new Set<string>());
   const listRef = useRef<FlatList<Message>>(null);
 
-  const load = useCallback(async () => {
-    if (!conversationId) return;
-    const [conversationData, messageData] = await Promise.all([
-      fetchConversation(conversationId),
-      fetchMessages(conversationId),
-    ]);
-    setConversation(conversationData);
-    messageData.forEach((m) => seenIds.current.add(m.id));
-    setMessages(messageData);
-  }, [conversationId]);
+  useEffect(() => {
+    if (!fetchedMessages) return;
+    fetchedMessages.forEach((m) => seenIds.current.add(m.id));
+    setMessages(fetchedMessages);
+  }, [fetchedMessages]);
+
+  const sendMessageMutation = useSendMessage();
+  const sendMessageMediaMutation = useSendMessageMedia();
+  const { mutate: markConversationRead } = useMarkConversationRead();
+  const deleteMessageMutation = useDeleteMessage();
+  const blockUserMutation = useBlockUser();
+  const sending = sendMessageMutation.isPending;
+  const sendingMedia = sendMessageMediaMutation.isPending;
 
   useFocusEffect(
     useCallback(() => {
-      load()
-        .catch((error) => console.log('Failed to load conversation:', error))
-        .finally(() => setLoading(false));
+      refetchConversation().catch((error) => console.log('Failed to load conversation:', error));
+      refetchMessages().catch((error) => console.log('Failed to load conversation:', error));
       if (conversationId && selfId) {
-        markConversationRead(conversationId, selfId).catch((error) =>
-          console.log('Failed to mark conversation read:', error)
+        markConversationRead(
+          { conversationId, userId: selfId },
+          { onError: (error) => console.log('Failed to mark conversation read:', error) }
         );
       }
-    }, [load, conversationId, selfId])
+    }, [conversationId, selfId, refetchConversation, refetchMessages, markConversationRead])
   );
 
   // Fallback for realtime silently dropping during backgrounding: when the
@@ -81,28 +94,28 @@ export default function ConversationScreen() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        load().catch((error) => console.log('Failed to load conversation:', error));
+        refetchConversation().catch((error) => console.log('Failed to load conversation:', error));
+        refetchMessages().catch((error) => console.log('Failed to load conversation:', error));
       }
     });
     return () => subscription.remove();
-  }, [load]);
+  }, [refetchConversation, refetchMessages]);
 
   useMessagesRealtime(conversationId ?? '', (incoming) => {
     if (seenIds.current.has(incoming.id)) return;
     seenIds.current.add(incoming.id);
     setMessages((prev) => [...prev, incoming]);
     if (conversationId && selfId) {
-      markConversationRead(conversationId, selfId).catch(() => {});
+      markConversationRead({ conversationId, userId: selfId });
     }
   });
 
   async function onSend() {
     const body = draft.trim();
     if (!body || !conversationId || !selfId || sending) return;
-    setSending(true);
     setDraft('');
     try {
-      const sent = await sendMessage(conversationId, selfId, body);
+      const sent = await sendMessageMutation.mutateAsync({ conversationId, senderId: selfId, body });
       if (!seenIds.current.has(sent.id)) {
         seenIds.current.add(sent.id);
         setMessages((prev) => [...prev, sent]);
@@ -110,8 +123,6 @@ export default function ConversationScreen() {
     } catch (error) {
       Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
       setDraft(body);
-    } finally {
-      setSending(false);
     }
   }
 
@@ -132,12 +143,15 @@ export default function ConversationScreen() {
       if (result.canceled || !conversationId || !selfId) return;
 
       const asset = result.assets[0];
-      setSendingMedia(true);
       try {
-        const sent = await sendMessageMedia(conversationId, selfId, {
-          uri: asset.uri,
-          mediaType: asset.type === 'video' ? 'video' : 'image',
-          mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+        const sent = await sendMessageMediaMutation.mutateAsync({
+          conversationId,
+          senderId: selfId,
+          media: {
+            uri: asset.uri,
+            mediaType: asset.type === 'video' ? 'video' : 'image',
+            mimeType: asset.mimeType ?? (asset.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+          },
         });
         if (!seenIds.current.has(sent.id)) {
           seenIds.current.add(sent.id);
@@ -145,8 +159,6 @@ export default function ConversationScreen() {
         }
       } catch (error) {
         Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
-      } finally {
-        setSendingMedia(false);
       }
     } catch (error) {
       Alert.alert('Could not send', error instanceof Error ? error.message : 'Something went wrong.');
@@ -163,7 +175,7 @@ export default function ConversationScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteMessage(message.id);
+              await deleteMessageMutation.mutateAsync(message.id);
               setMessages((prev) => prev.filter((m) => m.id !== message.id));
             } catch (error) {
               Alert.alert('Could not delete', error instanceof Error ? error.message : 'Something went wrong.');
@@ -172,7 +184,7 @@ export default function ConversationScreen() {
         },
       ]);
     },
-    [selfId]
+    [selfId, deleteMessageMutation]
   );
 
   const keyExtractor = useCallback((item: Message) => item.id, []);
@@ -199,7 +211,10 @@ export default function ConversationScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await blockUser(selfId, conversation.other_participant.id);
+              await blockUserMutation.mutateAsync({
+                blockerId: selfId,
+                blockedId: conversation.other_participant.id,
+              });
               router.back();
             } catch (error) {
               Alert.alert('Could not block', error instanceof Error ? error.message : 'Something went wrong.');

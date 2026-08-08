@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -8,7 +8,8 @@ import { Button } from '@/shared/components/Button';
 import { StatusBadge } from '@/shared/components/StatusBadge';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchOwnedPlaces, type Place, type Dish } from '@/shared/api/queries';
+import { useOwnedPlaces } from '@/features/owner/hooks/use-owned-places';
+import type { Place, Dish } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -19,21 +20,18 @@ export default function OwnerDashboardScreen() {
   const { profile, session } = useAuthContext();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
-  const [places, setPlaces] = useState<OwnedPlace[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const {
+    data: places = [],
+    isLoading: loading,
+    isError: loadError,
+    refetch,
+  } = useOwnedPlaces(ownerId || undefined);
 
   useFocusEffect(
     useCallback(() => {
       if (!ownerId) return;
-      fetchOwnedPlaces(ownerId)
-        .then((data) => {
-          setPlaces(data);
-          setLoadError(false);
-        })
-        .catch(() => setLoadError(true))
-        .finally(() => setLoading(false));
-    }, [ownerId])
+      refetch();
+    }, [ownerId, refetch])
   );
 
   const keyExtractor = useCallback((item: OwnedPlace) => item.id, []);

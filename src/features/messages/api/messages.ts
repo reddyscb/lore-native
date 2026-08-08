@@ -1,5 +1,5 @@
 import { supabase } from '@/shared/supabase/supabase';
-import { EXTENSION_BY_MIME_TYPE, type PickedMedia } from '@/shared/api/queries';
+import { EXTENSION_BY_MIME_TYPE, type PickedMedia } from '@/shared/api/media';
 
 export type MessageParticipant = {
   id: string;

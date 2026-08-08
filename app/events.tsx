@@ -8,7 +8,10 @@ import { Button } from '@/shared/components/Button';
 import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
 import { formatEventDate } from '@/shared/utils/format';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchEvents, fetchMyTickets, reserveTickets, type EventRow, type Ticket } from '@/shared/api/queries';
+import { useEvents } from '@/features/events/hooks/use-events';
+import { useMyTickets } from '@/features/events/hooks/use-my-tickets';
+import { useReserveTickets } from '@/features/events/hooks/use-reserve-tickets';
+import type { EventRow } from '@/features/events/api/events';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -18,35 +21,29 @@ export default function EventsScreen() {
   const { profile, session } = useAuthContext();
   const userId = profile?.id ?? session?.user?.id ?? '';
 
-  const [events, setEvents] = useState<EventRow[]>([]);
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events = [], isLoading: eventsLoading, refetch: refetchEvents } = useEvents();
+  const {
+    data: tickets = [],
+    isLoading: ticketsLoading,
+    refetch: refetchTickets,
+  } = useMyTickets(userId || undefined);
+  const loading = eventsLoading || (!!userId && ticketsLoading);
   const [banner, setBanner] = useState<Banner>(null);
-
-  const load = useCallback(async () => {
-    const [eventData, ticketData] = await Promise.all([
-      fetchEvents(),
-      userId ? fetchMyTickets(userId) : Promise.resolve([]),
-    ]);
-    setEvents(eventData);
-    setTickets(ticketData);
-  }, [userId]);
+  const reserveTicketsMutation = useReserveTickets();
 
   useFocusEffect(
     useCallback(() => {
-      load().finally(() => setLoading(false));
-    }, [load])
+      refetchEvents();
+      if (userId) refetchTickets();
+    }, [userId, refetchEvents, refetchTickets])
   );
 
   const onReserve = useCallback(
     async (eventId: string, count: number) => {
       if (!userId) return;
       try {
-        const result = await reserveTickets(eventId, userId, count);
+        const result = await reserveTicketsMutation.mutateAsync({ eventId, userId, count });
         setBanner(result === 'ok' ? { kind: 'reserved' } : { kind: 'sold-out' });
-        // Refetch either way: on success to pick up the new count, on failure
-        // because a stale "N left" is exactly what caused the failure.
-        await load();
       } catch (error) {
         Alert.alert(
           'Could not reserve',
@@ -54,7 +51,7 @@ export default function EventsScreen() {
         );
       }
     },
-    [userId, load]
+    [userId, reserveTicketsMutation]
   );
 
   const keyExtractor = useCallback((item: EventRow) => item.id, []);

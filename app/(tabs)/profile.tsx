@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,15 +8,16 @@ import { Avatar } from '@/shared/components/Avatar';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useUpdateAvatar } from '@/features/auth/hooks/use-update-avatar';
 import { supabase } from '@/shared/supabase/supabase';
-import { updateAvatar } from '@/shared/api/queries';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { profile, session, refreshProfile } = useAuthContext();
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const updateAvatarMutation = useUpdateAvatar();
+  const uploadingAvatar = updateAvatarMutation.isPending;
 
   async function onChangeAvatar() {
     const userId = profile?.id ?? session?.user?.id;
@@ -42,12 +42,14 @@ export default function ProfileScreen() {
     if (result.canceled) return;
     const asset = result.assets[0];
 
-    setUploadingAvatar(true);
     try {
-      await updateAvatar(userId, {
-        uri: asset.uri,
-        mediaType: 'image',
-        mimeType: asset.mimeType ?? 'image/jpeg',
+      await updateAvatarMutation.mutateAsync({
+        userId,
+        media: {
+          uri: asset.uri,
+          mediaType: 'image',
+          mimeType: asset.mimeType ?? 'image/jpeg',
+        },
       });
       await refreshProfile();
     } catch (error) {
@@ -55,8 +57,6 @@ export default function ProfileScreen() {
         'Could not update photo',
         error instanceof Error ? error.message : 'Something went wrong.'
       );
-    } finally {
-      setUploadingAvatar(false);
     }
   }
 

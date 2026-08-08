@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
@@ -6,7 +6,9 @@ import { PageHeader } from '@/shared/components/PageHeader';
 import { PlaceListItem } from '@/features/places/components/PlaceListItem';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { fetchUnclaimedPlaces, claimPlace, type PlaceSummary } from '@/shared/api/queries';
+import { useUnclaimedPlaces } from '@/features/owner/hooks/use-unclaimed-places';
+import { useClaimPlace } from '@/features/owner/hooks/use-claim-place';
+import type { PlaceSummary } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -15,24 +17,16 @@ export default function ClaimPlaceScreen() {
   const { profile, session, refreshProfile } = useAuthContext();
   const userId = profile?.id ?? session?.user?.id ?? '';
 
-  const [places, setPlaces] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: places = [], isLoading: loading, isError: loadError } = useUnclaimedPlaces();
   const [claimingId, setClaimingId] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState(false);
-
-  useEffect(() => {
-    fetchUnclaimedPlaces()
-      .then(setPlaces)
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  }, []);
+  const claimPlaceMutation = useClaimPlace();
 
   const onClaim = useCallback(
     async (placeId: string) => {
       if (!userId || claimingId) return;
       setClaimingId(placeId);
       try {
-        await claimPlace(userId, placeId);
+        await claimPlaceMutation.mutateAsync({ userId, placeId });
         await refreshProfile();
         router.replace('/owner');
       } catch (error) {
@@ -43,7 +37,7 @@ export default function ClaimPlaceScreen() {
         setClaimingId(null);
       }
     },
-    [userId, claimingId, refreshProfile, router]
+    [userId, claimingId, claimPlaceMutation, refreshProfile, router]
   );
 
   const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);

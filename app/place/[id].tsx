@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import {
@@ -20,20 +20,15 @@ import { DropCard } from '@/features/drops/components/DropCard';
 import { ReplyRow } from '@/features/drops/components/ReplyRow';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import {
-  fetchPlace,
-  fetchDishes,
-  fetchPlaceDrops,
-  fetchCollectionsForPlace,
-  saveToCollection,
-  removeFromCollection,
-  createReply,
-  type Place,
-  type Dish,
-  type Drop,
-  type DropReply,
-  type Collection,
-} from '@/shared/api/queries';
+import { usePlace } from '@/features/places/hooks/use-place';
+import { useDishes } from '@/features/places/hooks/use-dishes';
+import { usePlaceDrops } from '@/features/drops/hooks/use-place-drops';
+import { useCreateReply } from '@/features/drops/hooks/use-create-reply';
+import { useCollectionsForPlace } from '@/features/collections/hooks/use-collections-for-place';
+import { useSaveToCollection } from '@/features/collections/hooks/use-save-to-collection';
+import { useRemoveFromCollection } from '@/features/collections/hooks/use-remove-from-collection';
+import type { Place } from '@/features/places/api/places';
+import type { Collection } from '@/features/collections/api/collections';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -52,49 +47,15 @@ export default function PlaceDetailScreen() {
   // need it for the header regardless), but dishes/drops load independently
   // afterward with their own small inline spinners rather than blocking the
   // whole screen on whichever of the three queries is slowest.
-  const [place, setPlace] = useState<Place | null>(null);
-  const [placeNotFound, setPlaceNotFound] = useState(false);
-  const [dishes, setDishes] = useState<Dish[]>([]);
-  const [dishesLoading, setDishesLoading] = useState(true);
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const [dropsLoading, setDropsLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    setPlace(null);
-    setPlaceNotFound(false);
-    fetchPlace(id)
-      .then(setPlace)
-      .catch(() => setPlaceNotFound(true));
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    setDishesLoading(true);
-    fetchDishes(id)
-      .then(setDishes)
-      .finally(() => setDishesLoading(false));
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) return;
-    setDropsLoading(true);
-    fetchPlaceDrops(id)
-      .then(setDrops)
-      .finally(() => setDropsLoading(false));
-  }, [id]);
-
-  const [savedIn, setSavedIn] = useState<Collection[]>([]);
-
-  useEffect(() => {
-    if (!id || !authorId) return;
-    fetchCollectionsForPlace(authorId, id).then(setSavedIn);
-  }, [id, authorId]);
+  const { data: place, isLoading: placeLoading, isError: placeNotFound } = usePlace(id);
+  const { data: dishes = [], isLoading: dishesLoading } = useDishes(id);
+  const { data: drops = [], isLoading: dropsLoading } = usePlaceDrops(id);
+  const { data: savedIn = [] } = useCollectionsForPlace(authorId || undefined, id);
 
   if (!place) {
     return (
       <ScreenContainer hasHeader style={styles.centered}>
-        {placeNotFound ? (
+        {placeNotFound && !placeLoading ? (
           <Text style={styles.empty}>Couldn&apos;t find this café.</Text>
         ) : (
           <ActivityIndicator color={colors.raspberry} />
@@ -129,12 +90,7 @@ export default function PlaceDetailScreen() {
         </View>
 
         {authorId && (
-          <SaveToCollection
-            ownerId={authorId}
-            placeId={place.id}
-            savedIn={savedIn}
-            onChange={setSavedIn}
-          />
+          <SaveToCollection ownerId={authorId} placeId={place.id} savedIn={savedIn} />
         )}
 
         {LORE_FIELDS.some(({ key }) => place[key]) && (
@@ -193,20 +149,8 @@ export default function PlaceDetailScreen() {
               <View key={drop.id}>
                 <DropCard drop={drop} />
                 {drop.drop_replies?.map((reply) => <ReplyRow key={reply.id} reply={reply} />)}
-                {authorId && (
-                  <ReplyComposer
-                    dropId={drop.id}
-                    authorId={authorId}
-                    onReplyAdded={(reply) => {
-                      setDrops((prev) =>
-                        prev.map((d) =>
-                          d.id === drop.id
-                            ? { ...d, drop_replies: [...(d.drop_replies ?? []), reply] }
-                            : d
-                        )
-                      );
-                    }}
-                  />
+                {authorId && id && (
+                  <ReplyComposer placeId={id} dropId={drop.id} authorId={authorId} />
                 )}
               </View>
             ))
@@ -227,43 +171,31 @@ function SaveToCollection({
   ownerId,
   placeId,
   savedIn,
-  onChange,
 }: {
   ownerId: string;
   placeId: string;
   savedIn: Collection[];
-  onChange: (collections: Collection[]) => void;
 }) {
   const [name, setName] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  async function refresh() {
-    onChange(await fetchCollectionsForPlace(ownerId, placeId));
-  }
+  const saveMutation = useSaveToCollection();
+  const removeMutation = useRemoveFromCollection();
+  const busy = saveMutation.isPending || removeMutation.isPending;
 
   async function onSave() {
     if (!name.trim()) return;
-    setBusy(true);
     try {
-      await saveToCollection(ownerId, placeId, name);
+      await saveMutation.mutateAsync({ ownerId, placeId, name });
       setName('');
-      await refresh();
     } catch (error) {
       Alert.alert('Could not save', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
     }
   }
 
   async function onRemove(collectionId: string) {
-    setBusy(true);
     try {
-      await removeFromCollection(collectionId, placeId);
-      await refresh();
+      await removeMutation.mutateAsync({ collectionId, placeId });
     } catch (error) {
       Alert.alert('Could not remove', error instanceof Error ? error.message : 'Something went wrong.');
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -301,28 +233,28 @@ function SaveToCollection({
 }
 
 function ReplyComposer({
+  placeId,
   dropId,
   authorId,
-  onReplyAdded,
 }: {
+  placeId: string;
   dropId: string;
   authorId: string;
-  onReplyAdded: (reply: DropReply) => void;
 }) {
   const [body, setBody] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const createReplyMutation = useCreateReply(placeId);
 
   async function onSubmit() {
     if (!body.trim()) return;
-    setSubmitting(true);
     try {
-      const reply = await createReply(dropId, authorId, body.trim());
-      onReplyAdded(reply);
+      await createReplyMutation.mutateAsync({ dropId, authorId, body: body.trim() });
       setBody('');
-    } finally {
-      setSubmitting(false);
+    } catch {
+      // The reply composer has no dedicated error UI — matches prior behavior.
     }
   }
+
+  const submitting = createReplyMutation.isPending;
 
   return (
     <View style={styles.replyComposer}>

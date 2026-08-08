@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -15,7 +15,8 @@ import { TextField } from '@/shared/components/TextField';
 import { Button } from '@/shared/components/Button';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
-import { createDiaryEntry, fetchPlace, type Place } from '@/shared/api/queries';
+import { usePlace } from '@/features/places/hooks/use-place';
+import { useCreateDiaryEntry } from '@/features/passport/hooks/use-create-diary-entry';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -25,30 +26,21 @@ export default function CheckInScreen() {
   const { profile, session } = useAuthContext();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
-  const [place, setPlace] = useState<Place | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const { data: place, isLoading: loading } = usePlace(placeId);
+  const createDiaryEntryMutation = useCreateDiaryEntry();
 
   const [dish, setDish] = useState('');
   const [whoWith, setWhoWith] = useState('');
   const [spend, setSpend] = useState('');
   const [note, setNote] = useState('');
 
-  useEffect(() => {
-    if (!placeId) return;
-    fetchPlace(placeId)
-      .then(setPlace)
-      .finally(() => setLoading(false));
-  }, [placeId]);
-
   async function onSubmit() {
     if (!ownerId || !placeId) return;
-    setSubmitting(true);
     try {
       // Match the web's parsing: strip everything non-numeric, and treat an
       // empty or unparseable value as "didn't say" rather than zero.
       const spendDigits = spend.replace(/[^0-9]/g, '');
-      await createDiaryEntry({
+      await createDiaryEntryMutation.mutateAsync({
         owner_id: ownerId,
         place_id: placeId,
         dish: dish.trim() || undefined,
@@ -62,10 +54,10 @@ export default function CheckInScreen() {
         'Could not save',
         error instanceof Error ? error.message : 'Something went wrong.'
       );
-    } finally {
-      setSubmitting(false);
     }
   }
+
+  const submitting = createDiaryEntryMutation.isPending;
 
   if (loading) {
     return (

@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, StyleSheet, Text } from 'react-native';
 import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { PlaceListItem } from '@/features/places/components/PlaceListItem';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { fetchCollection, type Collection, type PlaceSummary } from '@/shared/api/queries';
+import { useCollection } from '@/features/collections/hooks/use-collection';
+import type { PlaceSummary } from '@/features/places/api/places';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
@@ -13,19 +14,9 @@ export default function CollectionDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [collection, setCollection] = useState<Collection | null>(null);
-  const [places, setPlaces] = useState<PlaceSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    fetchCollection(id)
-      .then((result) => {
-        setCollection(result.collection);
-        setPlaces(result.places);
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data, isLoading: loading } = useCollection(id);
+  const collection = data?.collection ?? null;
+  const places = data?.places ?? [];
 
   const keyExtractor = useCallback((item: PlaceSummary) => item.id, []);
   const renderItem = useCallback(
