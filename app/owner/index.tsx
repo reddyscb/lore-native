@@ -8,7 +8,7 @@ import { Card } from '@/shared/components/Card';
 import { Button } from '@/shared/components/Button';
 import { StatusBadge } from '@/shared/components/StatusBadge';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useOwnedPlaces } from '@/features/owner/hooks/use-owned-places';
 import type { Place, Dish } from '@/features/places/api/places';
 
@@ -18,7 +18,7 @@ type OwnedPlace = Place & { dishes: Dish[] };
 
 export default function OwnerDashboardScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
   const {

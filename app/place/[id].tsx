@@ -19,7 +19,7 @@ import { StatusBadge } from '@/shared/components/StatusBadge';
 import { DropCard } from '@/features/drops/components/DropCard';
 import { ReplyRow } from '@/features/drops/components/ReplyRow';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { usePlace } from '@/features/places/hooks/use-place';
 import { useDishes } from '@/features/places/hooks/use-dishes';
 import { usePlaceDrops } from '@/features/drops/hooks/use-place-drops';
@@ -40,7 +40,7 @@ const LORE_FIELDS: { key: keyof Place; label: string }[] = [
 
 export default function PlaceDetailScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const authorId = profile?.id ?? session?.user?.id ?? '';
   const { id } = useLocalSearchParams<{ id: string }>();
   // `place` gates the initial paint (it's a fast single-row lookup, and we

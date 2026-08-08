@@ -7,14 +7,14 @@ import { TextField } from '@/shared/components/TextField';
 import { Chip } from '@/shared/components/Chip';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
 import { supabase } from '@/shared/supabase/supabase';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 type Role = 'seeker' | 'owner';
 
 export default function OnboardingScreen() {
-  const { session, refreshProfile } = useAuthContext();
+  const { session, refreshProfile } = useAuthStore();
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<Role>('seeker');
   const [loading, setLoading] = useState(false);

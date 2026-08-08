@@ -1,5 +1,5 @@
 import { SplashScreen } from 'expo-router';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -10,7 +10,7 @@ type Props = {
 /** Keeps the native splash screen up until fonts are loaded AND the auth
  * check has resolved, so nothing ever flashes unstyled or logged-out. */
 export function SplashScreenController({ fontsLoaded }: Props) {
-  const { isLoading } = useAuthContext();
+  const { isLoading } = useAuthStore();
 
   if (fontsLoaded && !isLoading) {
     SplashScreen.hideAsync();

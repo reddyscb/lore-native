@@ -1,19 +1,20 @@
-import { PropsWithChildren, useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { PropsWithChildren, useEffect } from 'react';
 import { supabase } from '@/shared/supabase/supabase';
-import { AuthContext, type Profile } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 
 export default function AuthProvider({ children }: PropsWithChildren) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const session = useAuthStore((state) => state.session);
+  const setSession = useAuthStore((state) => state.setSession);
+  const setProfile = useAuthStore((state) => state.setProfile);
+  const setLoading = useAuthStore((state) => state.setLoading);
+  const refreshProfile = useAuthStore((state) => state.refreshProfile);
 
   // Load the current session once, then subscribe to changes (sign in,
   // sign out, token refresh — all flow through the same listener).
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (!session) setIsLoading(false);
+      if (!session) setLoading(false);
     });
 
     const {
@@ -23,18 +24,7 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  async function fetchProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, display_name, role, onboarded, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (error) console.error('Error fetching profile:', error);
-    setProfile(data ?? null);
-  }
+  }, [setSession, setLoading]);
 
   // Whenever the session changes, (re)fetch the profile row. This is what
   // tells us whether someone needs onboarding, same as the web app's check.
@@ -44,33 +34,19 @@ export default function AuthProvider({ children }: PropsWithChildren) {
     async function run() {
       if (!session?.user) {
         setProfile(null);
-        setIsLoading(false);
+        setLoading(false);
         return;
       }
-      setIsLoading(true);
-      await fetchProfile(session.user.id);
-      if (!cancelled) setIsLoading(false);
+      setLoading(true);
+      await refreshProfile();
+      if (!cancelled) setLoading(false);
     }
 
     run();
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [session, setProfile, setLoading, refreshProfile]);
 
-  async function refreshProfile() {
-    if (!session?.user) return;
-    await fetchProfile(session.user.id);
-  }
-
-  const isLoggedIn = !!session;
-  const needsOnboarding = isLoggedIn && (!profile || profile.onboarded !== true);
-
-  return (
-    <AuthContext.Provider
-      value={{ session, profile, isLoading, isLoggedIn, needsOnboarding, refreshProfile }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  return <>{children}</>;
 }

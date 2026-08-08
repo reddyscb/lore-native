@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useCollections } from '@/features/collections/hooks/use-collections';
 import type { CollectionWithCount } from '@/features/collections/api/collections';
 
@@ -14,7 +14,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 
 export default function CollectionsScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
   const { data: collections = [], isLoading: loading, refetch } = useCollections(ownerId || undefined);

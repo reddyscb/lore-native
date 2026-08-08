@@ -6,7 +6,7 @@ import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { PlaceListItem } from '@/features/places/components/PlaceListItem';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useUnclaimedPlaces } from '@/features/owner/hooks/use-unclaimed-places';
 import { useClaimPlace } from '@/features/owner/hooks/use-claim-place';
 import type { PlaceSummary } from '@/features/places/api/places';
@@ -15,7 +15,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 
 export default function ClaimPlaceScreen() {
   const router = useRouter();
-  const { profile, session, refreshProfile } = useAuthContext();
+  const { profile, session, refreshProfile } = useAuthStore();
   const userId = profile?.id ?? session?.user?.id ?? '';
 
   const { data: places = [], isLoading: loading, isError: loadError } = useUnclaimedPlaces();

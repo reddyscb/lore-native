@@ -7,7 +7,7 @@ import { Card } from '@/shared/components/Card';
 import { Avatar } from '@/shared/components/Avatar';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useUpdateAvatar } from '@/features/auth/hooks/use-update-avatar';
 import { supabase } from '@/shared/supabase/supabase';
 
@@ -15,7 +15,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, session, refreshProfile } = useAuthContext();
+  const { profile, session, refreshProfile } = useAuthStore();
   const updateAvatarMutation = useUpdateAvatar();
   const uploadingAvatar = updateAvatarMutation.isPending;
 

@@ -8,7 +8,7 @@ import { Card } from '@/shared/components/Card';
 import { Button } from '@/shared/components/Button';
 import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
 import { formatEventDate } from '@/shared/utils/format';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useEvents } from '@/features/events/hooks/use-events';
 import { useMyTickets } from '@/features/events/hooks/use-my-tickets';
 import { useReserveTickets } from '@/features/events/hooks/use-reserve-tickets';
@@ -19,7 +19,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 type Banner = { kind: 'reserved' | 'sold-out' } | null;
 
 export default function EventsScreen() {
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const userId = profile?.id ?? session?.user?.id ?? '';
 
   const { data: events = [], isLoading: eventsLoading, refetch: refetchEvents } = useEvents();

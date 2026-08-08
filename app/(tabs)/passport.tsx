@@ -15,7 +15,7 @@ import { Card } from '@/shared/components/Card';
 import { Button } from '@/shared/components/Button';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { borderWidth, colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { usePlaceList } from '@/features/places/hooks/use-place-list';
 import { useStampedPlaceIds } from '@/features/passport/hooks/use-stamped-place-ids';
 import type { PlaceSummary } from '@/features/places/api/places';
@@ -24,7 +24,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 
 export default function PassportScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
   const { stamped: justStamped } = useLocalSearchParams<{ stamped?: string }>();
 

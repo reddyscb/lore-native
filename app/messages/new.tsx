@@ -7,7 +7,7 @@ import { PageHeader } from '@/shared/components/PageHeader';
 import { TextField } from '@/shared/components/TextField';
 import { Avatar } from '@/shared/components/Avatar';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useSearchProfiles } from '@/features/auth/hooks/use-search-profiles';
 import { useGetOrCreateConversation } from '@/features/messages/hooks/use-get-or-create-conversation';
 import type { ProfileSearchResult } from '@/features/auth/api/profiles';
@@ -16,7 +16,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 
 export default function NewMessageScreen() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const selfId = profile?.id ?? session?.user?.id ?? '';
 
   const [query, setQuery] = useState('');

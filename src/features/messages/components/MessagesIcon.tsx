@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontFamily } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useUnreadCount } from '@/features/messages/hooks/use-unread-count';
 
 /** Paper-plane entry point into the DM inbox, with an unread-count badge.
@@ -13,7 +13,7 @@ import { useUnreadCount } from '@/features/messages/hooks/use-unread-count';
  *  cached query, so five tab icons cost one fetch, not five. */
 export function MessagesIcon() {
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const userId = profile?.id ?? session?.user?.id;
   const { data: unreadCount = 0, refetch } = useUnreadCount(!!userId);
 

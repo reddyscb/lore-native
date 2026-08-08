@@ -21,7 +21,7 @@ import { PlaceListItem } from '@/features/places/components/PlaceListItem';
 import { MediaStrip } from '@/shared/components/MediaStrip';
 import { MessagesIcon } from '@/features/messages/components/MessagesIcon';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useCreateDrop } from '@/features/drops/hooks/use-create-drop';
 import { usePlace } from '@/features/places/hooks/use-place';
 import { useSearchPlaces } from '@/features/places/hooks/use-search-places';
@@ -37,7 +37,7 @@ const MAX_DROP_MEDIA = 4;
 type PickedMediaItem = PickedMedia & { id: string };
 
 export default function PostScreen() {
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const { placeId } = useLocalSearchParams<{ placeId?: string }>();
   const authorId = profile?.id ?? session?.user?.id ?? '';
 

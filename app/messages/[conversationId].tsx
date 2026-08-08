@@ -19,7 +19,7 @@ import { TextField } from '@/shared/components/TextField';
 import { Avatar } from '@/shared/components/Avatar';
 import { MediaStrip } from '@/shared/components/MediaStrip';
 import { colors, fontFamily, fontSize, radii, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useMessagesRealtime } from '@/features/messages/hooks/use-messages-realtime';
 import { useConversation } from '@/features/messages/hooks/use-conversation';
 import { useMessages } from '@/features/messages/hooks/use-messages';
@@ -35,7 +35,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 export default function ConversationScreen() {
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const router = useRouter();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const selfId = profile?.id ?? session?.user?.id ?? '';
 
   const {

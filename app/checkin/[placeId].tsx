@@ -14,7 +14,7 @@ import { PageHeader } from '@/shared/components/PageHeader';
 import { TextField } from '@/shared/components/TextField';
 import { Button } from '@/shared/components/Button';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { usePlace } from '@/features/places/hooks/use-place';
 import { useCreateDiaryEntry } from '@/features/passport/hooks/use-create-diary-entry';
 
@@ -23,7 +23,7 @@ export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteEr
 export default function CheckInScreen() {
   const router = useRouter();
   const { placeId } = useLocalSearchParams<{ placeId: string }>();
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
   const { data: place, isLoading: loading } = usePlace(placeId);

@@ -6,14 +6,14 @@ import { ScreenContainer } from '@/shared/components/ScreenContainer';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Card } from '@/shared/components/Card';
 import { colors, fontFamily, fontSize, spacing } from '@/shared/theme/theme';
-import { useAuthContext } from '@/features/auth/hooks/use-auth-context';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useDiaryEntries } from '@/features/passport/hooks/use-diary-entries';
 import type { DiaryEntry } from '@/features/passport/api/passport';
 
 export { RouteErrorBoundary as ErrorBoundary } from '@/shared/components/RouteErrorBoundary';
 
 export default function DiaryScreen() {
-  const { profile, session } = useAuthContext();
+  const { profile, session } = useAuthStore();
   const ownerId = profile?.id ?? session?.user?.id ?? '';
 
   const { data: entries = [], isLoading: loading, refetch } = useDiaryEntries(ownerId || undefined);
