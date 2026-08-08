@@ -75,7 +75,8 @@ that there's no in-app admin UI for this.
 
 ```ts
 function useFeatureFlag(key: string): boolean {
-  // 1. fetch the row (TanStack Query, ~5 min staleTime)
+  // 1. fetch the row (TanStack Query, no per-hook staleTime override —
+  //    inherits the app's global 2-minute default)
   // 2. if no row, or enabled === false → false
   // 3. if target_roles is non-empty and profile.role isn't in it → false
   // 4. if target_cities is non-empty and there's no resolvable city
@@ -94,11 +95,12 @@ Two deliberate departures from the v1.0 sketch:
   (no row, no profile, no city signal), the hook returns `false`. A gated
   feature stays hidden rather than flashing on and then off.
 
-5-minute `staleTime` (matching the rest of the app's TanStack Query
-defaults) means a kill switch takes effect for an already-open session
-within 5 minutes, not instantly — an accepted trade-off, not a gap; a hard
-crash-level failure is handled by the feature's own error boundary
-regardless of the flag.
+No per-hook `staleTime` override — same as every other hook in this
+codebase, it inherits `QueryProvider`'s global 2-minute default. That means
+a kill switch takes effect for an already-open session within 2 minutes,
+not instantly — an accepted trade-off, not a gap; a hard crash-level
+failure is handled by the feature's own error boundary regardless of the
+flag.
 
 ## Lifecycle: adding and retiring a flag
 
