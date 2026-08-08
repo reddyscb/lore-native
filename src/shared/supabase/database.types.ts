@@ -454,6 +454,39 @@ export type Database = {
           },
         ]
       }
+      feature_flags: {
+        Row: {
+          created_at: string
+          description: string | null
+          enabled: boolean
+          enabled_at: string | null
+          key: string
+          rollout_percentage: number
+          target_cities: string[]
+          target_roles: string[]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          key: string
+          rollout_percentage?: number
+          target_cities?: string[]
+          target_roles?: string[]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          enabled_at?: string | null
+          key?: string
+          rollout_percentage?: number
+          target_cities?: string[]
+          target_roles?: string[]
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string | null

@@ -2,11 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a general-purpose `feature_flags` table plus a `useFeatureFlag(key)` client hook, giving any future lore-native feature an instant kill switch, a gradual percentage rollout, and (once Phase 14 adds real city data) city gating — all through one mechanism, toggled only via the Supabase dashboard.
+**Goal:** Add a general-purpose `feature_flags` table plus a `useFeatureFlag(key)` client hook, giving any future lore-native feature an instant kill switch, a gradual percentage rollout, and real city gating (against `profiles.city`) — all through one mechanism, toggled only via the Supabase dashboard.
 
 **Architecture:** One Postgres table (`public.feature_flags`) with public-read-only RLS, a trigger that stamps `enabled_at` the moment a flag reaches full stable rollout (for the 30-day retirement query), and a thin TanStack Query hook on the client that evaluates `enabled` → `target_roles` → `target_cities` → `rollout_percentage` in order, failing closed at every branch.
 
-**Tech Stack:** Postgres/Supabase (via the Supabase MCP, no local migrations folder in this repo), TanStack Query, Zustand's `useAuthStore` (for `session.user.id` / `profile.role`), TypeScript.
+**Tech Stack:** Postgres/Supabase (via the Supabase MCP, no local migrations folder in this repo), TanStack Query, Zustand's `useAuthStore` (for `session.user.id` / `profile.role` / `profile.city`), TypeScript.
+
+**Mid-implementation correction (see design spec's `target_cities` note):** `generate_typescript_types` showed `profiles.city` and `places.city` already exist and are populated on the live project — the spec's original "no city data source exists" premise was wrong. Confirmed via a full-repo grep that no app code selects `city` anywhere today. User decision: wire it up for real rather than leave it structural-only. This plan reflects that decision throughout.
 
 **Spec:** `docs/superpowers/specs/2026-08-08-feature-flags-design.md` — read it before starting; this plan implements it as written. Skill reference: `.claude/skills/feature-flags/SKILL.md` (already written, no plan action needed — just follow it for the add/retire workflow shape).
 
@@ -16,8 +18,8 @@
 - Any new Postgres function must pin `search_path = ''` (this project's standing SECURITY DEFINER/trigger hardening convention — see CLAUDE.md's "Security" notes and prior phases' migrations).
 - RLS: `select` open to `anon` + `authenticated`; **no** `insert`/`update`/`delete` policies for either — all writes happen via the Supabase dashboard (service role bypasses RLS), per the confirmed "dashboard only" decision in the spec.
 - `rollout_percentage` defaults to **0** (ships dark), not 100 — a deliberate reversal of the original v1.0 sketch's default.
-- `target_cities` is **structural only** right now — no city data source exists yet (Phase 13/14 work). The hook must fail closed (return `false`) whenever `target_cities` is non-empty, regardless of role/rollout.
-- The hook fails closed — returns `false` — on: query still loading, no matching row, `enabled = false`, role mismatch, non-empty `target_cities`, or no signed-in user id to bucket against.
+- `target_cities` gates against `profiles.city` (added to `useAuthStore`'s `Profile` type + select in this plan) — same shape as the `target_roles` check, not a fail-closed no-op. `expo-location`/device-detected city is still out of scope (Phase 13).
+- The hook fails closed — returns `false` — on: query still loading, no matching row, `enabled = false`, role mismatch, city mismatch (or no `profile.city`), or no signed-in user id to bucket against.
 - Percentage bucketing hashes `` `${key}:${userId}` ``, not just `userId` — two independent flags both at 50% must not select the same users.
 - Follow the existing feature-folder convention: `src/features/flags/{api,lib,hooks}/...`, `@/` path alias, no inline hex/magic numbers (n/a here — no UI in this step).
 - **One commit for this entire step**, made at the end of Task 4 — not one commit per task. Every prior Phase 11 step (1 through 9) landed as exactly one commit each (see `git log --oneline`); this step follows the same convention regardless of how many tasks the plan below is broken into.
@@ -98,11 +100,18 @@ Run the Supabase MCP `get_advisors` tool (type: `security`). Fix anything it fla
 
 - [ ] **Step 5: Regenerate TypeScript types**
 
+`npm run types:supabase` shells out to the local `supabase` CLI, which needs `supabase login` first — if that hasn't been done in this environment, the command silently writes a JSON error object over the types file instead of failing loudly. Check first:
+
 ```bash
 npm run types:supabase
+head -3 src/shared/supabase/database.types.ts
 ```
 
-Confirm `src/shared/supabase/database.types.ts` now has a `feature_flags` entry under `public.Tables` with the columns from Step 2.
+If the file now starts with `{"_tag":"Error"...` instead of `export type Json =`, restore it (`git checkout -- src/shared/supabase/database.types.ts`) and use the Supabase MCP's `generate_typescript_types` tool instead (project_id `jgksopmbfttqqngrsama`), writing its `types` field to `src/shared/supabase/database.types.ts` — this doesn't need local CLI auth.
+
+Note: the `types:supabase` script's output path was `lib/database.types.ts` before this task — a leftover from before Step 6's folder restructure moved the file to `src/shared/supabase/`. Fix it in `package.json` while here if it's still wrong.
+
+Either way, confirm `src/shared/supabase/database.types.ts` now has a `feature_flags` entry under `public.Tables` with the columns from Step 2, and that `profiles.Row` includes `city: string | null`.
 
 - [ ] **Step 6: Insert a temporary test row and verify the trigger**
 
@@ -195,12 +204,42 @@ Expected: clean.
 ### Task 3: Bucketing helper + `useFeatureFlag` hook
 
 **Files:**
+- Modify: `src/features/auth/stores/auth-store.ts`
 - Create: `src/features/flags/lib/hash-bucket.ts`
 - Create: `src/features/flags/hooks/use-feature-flag.ts`
 
 **Interfaces:**
 - Consumes: `fetchFeatureFlag`, `FeatureFlag` from `@/features/flags/api/feature-flags` (Task 2); `useAuthStore` from `@/features/auth/stores/auth-store`.
-- Produces: `export function hashToBucket(input: string): number` (0–99, deterministic); `export function useFeatureFlag(key: string): boolean`. This is the step's actual deliverable — every future feature wraps its risky code path in this hook.
+- Produces: `Profile.city: string | null` on `useAuthStore`; `export function hashToBucket(input: string): number` (0–99, deterministic); `export function useFeatureFlag(key: string): boolean`. This is the step's actual deliverable — every future feature wraps its risky code path in this hook.
+
+- [ ] **Step 0: Add `city` to the auth store's `Profile`**
+
+`profiles.city` already exists in the DB (confirmed via `generate_typescript_types` and a live query — every row is currently `'Hyderabad'`) but nothing in this app selects it yet. `useFeatureFlag`'s `target_cities` check (Step 3 below) needs it on `useAuthStore`, the same place `role` already lives for `target_roles`.
+
+In `src/features/auth/stores/auth-store.ts`, add `city` to the `Profile` type:
+
+```ts
+export type Profile = {
+  id: string;
+  display_name: string | null;
+  role: string | null;
+  onboarded: boolean | null;
+  avatar_url: string | null;
+  city: string | null;
+};
+```
+
+And add it to `refreshProfile`'s select list:
+
+```ts
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, role, onboarded, avatar_url, city')
+      .eq('id', session.user.id)
+      .maybeSingle();
+```
+
+That's the only change to this file — everything else (the store shape, `deriveFlags`, the other actions) is untouched.
 
 - [ ] **Step 1: Write the bucketing helper**
 
@@ -251,6 +290,7 @@ export const featureFlagKey = (key: string) => ['feature-flags', key] as const;
 export function useFeatureFlag(key: string): boolean {
   const userId = useAuthStore((state) => state.session?.user.id);
   const role = useAuthStore((state) => state.profile?.role ?? null);
+  const city = useAuthStore((state) => state.profile?.city ?? null);
 
   const { data: flag, isLoading } = useQuery({
     queryKey: featureFlagKey(key),
@@ -260,10 +300,7 @@ export function useFeatureFlag(key: string): boolean {
   if (isLoading || !flag || !userId) return false;
   if (!flag.enabled) return false;
   if (flag.target_roles.length > 0 && (!role || !flag.target_roles.includes(role))) return false;
-  // target_cities is structural only until Phase 14 adds a real city source
-  // (see docs/superpowers/specs/2026-08-08-feature-flags-design.md) — fail
-  // closed rather than guess who's in a targeted city.
-  if (flag.target_cities.length > 0) return false;
+  if (flag.target_cities.length > 0 && (!city || !flag.target_cities.includes(city))) return false;
 
   return hashToBucket(`${key}:${userId}`) < flag.rollout_percentage;
 }
@@ -275,7 +312,7 @@ No `staleTime` override — this matches every other hook in `src/features/*/hoo
 
 ```bash
 npx tsc --noEmit
-npx eslint src/features/flags/lib/hash-bucket.ts src/features/flags/hooks/use-feature-flag.ts
+npx eslint src/features/auth/stores/auth-store.ts src/features/flags/lib/hash-bucket.ts src/features/flags/hooks/use-feature-flag.ts
 ```
 Expected: both clean.
 
@@ -311,19 +348,26 @@ ps aux | grep -E "expo start|metro|expo run:ios" | grep -v grep
 ```
 If more than one process matches, kill the stale ones first — this repo has twice had a stale `expo start`/`expo run:ios` process silently serve old code to an entire manual/Maestro check (see CLAUDE.md's Phase 7 and Phase 9 entries). Start (or confirm) `npx expo start` shows a real full bundle line before trusting the next steps.
 
-- [ ] **Step 3: Run the 5-case verification matrix**
+- [ ] **Step 3: Run the 6-case verification matrix**
 
-For each case, update `_plan_verification_flag` via the Supabase MCP `execute_sql` tool, then reload the app in Simulator (shake → Reload, or `r` in the Expo CLI) and check the `[flag debug]` line in the Metro log:
+First check the signed-in test account's role and city (every seed profile was `'Hyderabad'` as of Task 1 — confirm it's still true for this specific account):
+
+```sql
+select id, role, city from public.profiles where id = '<the signed-in user id>';
+```
+
+Then, for each case below, update `_plan_verification_flag` via the Supabase MCP `execute_sql` tool, reload the app in Simulator (shake → Reload, or `r` in the Expo CLI), and check the `[flag debug]` line in the Metro log:
 
 | # | SQL | Expected log |
 |---|-----|---------------|
 | 1 | `update public.feature_flags set enabled = false, rollout_percentage = 100, target_roles = '{}', target_cities = '{}' where key = '_plan_verification_flag';` | `false` (kill switch wins even at 100%) |
 | 2 | `update public.feature_flags set enabled = true, rollout_percentage = 100 where key = '_plan_verification_flag';` | `true` (fully on) |
-| 3 | `update public.feature_flags set target_roles = '{owner}' where key = '_plan_verification_flag';` (assuming the signed-in test account's `profiles.role` is not `'owner'` — check with `select role from public.profiles where id = '<the signed-in user id>';` first) | `false` (role mismatch) |
-| 4 | `update public.feature_flags set target_roles = '{}', target_cities = '{Hyderabad}' where key = '_plan_verification_flag';` | `false` (fail-closed on `target_cities`, even though `rollout_percentage` is still 100) |
-| 5 | `update public.feature_flags set target_cities = '{}', rollout_percentage = 0 where key = '_plan_verification_flag';` | `false` (0% rollout) |
+| 3 | `update public.feature_flags set target_roles = '{owner}' where key = '_plan_verification_flag';` (assuming the account's role isn't `'owner'`, per the query above) | `false` (role mismatch) |
+| 4 | `update public.feature_flags set target_roles = '{}', target_cities = '{Hyderabad}' where key = '_plan_verification_flag';` | `true` (city **match** — proves `target_cities` actually gates on `profiles.city` now, not a permanent no-op) |
+| 5 | `update public.feature_flags set target_cities = '{Bangalore}' where key = '_plan_verification_flag';` | `false` (city **mismatch**) |
+| 6 | `update public.feature_flags set target_cities = '{}', rollout_percentage = 0 where key = '_plan_verification_flag';` | `false` (0% rollout) |
 
-If any case doesn't match, the bug is in Task 3's branch order (Global Constraints lists the exact fail-closed order: `enabled` → `target_roles` → `target_cities` → `rollout_percentage`) — fix `use-feature-flag.ts` and re-run the failing case before continuing.
+If any case doesn't match, the bug is in Task 3's branch order (Global Constraints lists the exact fail-closed order: `enabled` → `target_roles` → `target_cities` → `rollout_percentage`) — fix `use-feature-flag.ts` and re-run the failing case before continuing. If case 4 comes back `false` instead of `true`, check first whether `auth-store.ts`'s `refreshProfile` actually picked up `city` — a stale session/profile fetched before Task 3 Step 0 landed won't have it; force a fresh fetch (sign out/in, or reload after confirming the select list includes `city`).
 
 - [ ] **Step 4: Run the foundation-step-checkpoint static checks**
 
@@ -355,19 +399,22 @@ Via the Supabase MCP `execute_sql` tool. Confirm with a `select * from public.fe
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/features/flags src/shared/supabase/database.types.ts
+git add src/features/flags src/features/auth/stores/auth-store.ts src/shared/supabase/database.types.ts package.json \
+  docs/superpowers/specs/2026-08-08-feature-flags-design.md \
+  docs/superpowers/plans/2026-08-08-phase11-step10-feature-flags.md \
+  .claude/skills/feature-flags/SKILL.md
 git status
 ```
-Confirm only the expected files are staged (the three new files under `src/features/flags/` plus the regenerated types file — `profile.tsx` should show no diff per Step 6).
+Confirm only the expected files are staged (the three new files under `src/features/flags/`, the `auth-store.ts` `city` addition, the regenerated types file, `package.json`'s `types:supabase` path fix, and the design/plan/skill doc corrections made mid-implementation after the `profiles.city` discovery — `profile.tsx` should show no diff per Step 6).
 
 ```bash
 git commit -m "$(cat <<'EOF'
 Phase 11 Step 10: feature flags (kill switch, rollout %, lifecycle)
 
 New public.feature_flags table (enabled kill switch, rollout_percentage
-ramp, target_roles, target_cities structural-only-for-now) plus a
-trigger that stamps enabled_at once a flag is fully live, backing the
-30-day retirement query documented in the feature-flags skill.
+ramp, target_roles, target_cities) plus a trigger that stamps enabled_at
+once a flag is fully live, backing the 30-day retirement query
+documented in the feature-flags skill.
 
 useFeatureFlag(key) hook (src/features/flags) evaluates enabled ->
 target_roles -> target_cities -> rollout_percentage, failing closed at
@@ -375,7 +422,14 @@ every branch, with per-flag-independent percentage bucketing (hashes
 key+userId so two flags at the same rollout % don't select the same
 users).
 
-No flag exists yet — this ships the mechanism; the first real flag
+profiles.city (added to useAuthStore alongside role) already existed in
+the DB, populated but unused by any app code -- confirmed via
+generate_typescript_types and a full-repo grep -- so target_cities
+gates for real here rather than staying a structural no-op as
+originally spec'd. Also fixes package.json's types:supabase script,
+which still pointed at the pre-restructure lib/ path.
+
+No flag exists yet -- this ships the mechanism; the first real flag
 comes from whichever future feature needs it.
 EOF
 )"
@@ -386,7 +440,7 @@ git log --oneline -1
 
 ## Self-Review
 
-**Spec coverage:** Schema (Task 1) ✓, hook + fail-closed semantics + independent bucketing (Task 3) ✓, `target_cities` structural-only behavior (Task 3 Step 3, Global Constraints) ✓, lifecycle/`enabled_at` trigger (Task 1) ✓, dashboard-only writes / RLS (Task 1) ✓, `rollout_percentage` defaults to 0 (Task 1 Step 2 SQL) ✓, skill reference (spec front matter, no separate task needed since it's already written) ✓. Nothing in the spec's "Out of scope" section (admin UI, real city resolution, automated retirement enforcement) has a task here, correctly.
+**Spec coverage:** Schema (Task 1) ✓, hook + fail-closed semantics + independent bucketing (Task 3) ✓, `target_cities` gating against real `profiles.city` data (Task 3 Step 0/3, Global Constraints) ✓, lifecycle/`enabled_at` trigger (Task 1) ✓, dashboard-only writes / RLS (Task 1) ✓, `rollout_percentage` defaults to 0 (Task 1 Step 2 SQL) ✓, skill reference (spec front matter, no separate task needed since it's already written) ✓. Nothing in the spec's "Out of scope" section (admin UI, `expo-location`, automated retirement enforcement) has a task here, correctly.
 
 **Placeholder scan:** no TBD/TODO; every step has literal SQL/TS/bash, not descriptions of what to write.
 

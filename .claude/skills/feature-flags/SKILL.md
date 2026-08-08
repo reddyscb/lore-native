@@ -10,9 +10,8 @@ This skill is the operational how-to; that doc is the why.
 
 `public.feature_flags` is one table serving three purposes at once for any
 new/risky feature: an instant kill switch, a gradual percentage rollout,
-and (once Phase 14 lands city data) city-based gating. There is
-deliberately no in-app admin UI — every write goes through the Supabase
-dashboard.
+and city-based gating (against `profiles.city`). There is deliberately no
+in-app admin UI — every write goes through the Supabase dashboard.
 
 ## Adding a new flag
 
@@ -39,8 +38,8 @@ dashboard.
 
 Set `enabled = false` from the Supabase dashboard. This is instant and
 total, independent of `rollout_percentage` — no code change, no deploy.
-Already-open app sessions pick it up within 5 minutes (the client hook's
-TanStack Query `staleTime`), not instantly; if a failure needs to stop
+Already-open app sessions pick it up within 2 minutes (the client hook's
+TanStack Query default `staleTime`), not instantly; if a failure needs to stop
 *right now* for users already in a session, that's what the feature's own
 error boundary is for, not the flag.
 
@@ -73,7 +72,8 @@ it when touching this table for something else, or when the design doc's
 - No admin UI — toggling happens in the Supabase dashboard, by design.
 - No automatic retirement enforcement — the query above is the whole
   mechanism.
-- `target_cities` gating is structural only until Phase 14 adds a real
-  city source (`places.city`) — don't wire up city-based logic against
-  `profiles` speculatively; the client hook already fails closed
-  (excludes) when `target_cities` is set but no city signal exists.
+- `target_cities` gates against `profiles.city` (the account's stored
+  city, not live location — `expo-location`/device detection is Phase 13
+  scope). Every account is currently `'Hyderabad'`, so this can't yet be
+  exercised with real variation — that's a data-volume limitation, not a
+  reason to avoid using it.

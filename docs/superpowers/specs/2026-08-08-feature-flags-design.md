@@ -47,15 +47,25 @@ create table public.feature_flags (
 - `target_roles` — empty array means no role restriction (matches the
   original design; e.g. `{owner}` to test an owner-dashboard feature on
   owner accounts first).
-- `target_cities` — empty array means no city restriction. **This column
-  is structural, not functional yet.** Neither `profiles` nor `places` has
-  a city value the app can check against today — `places.city` is planned
-  in Phase 14, and nothing in Phase 13 (location) or Phase 14 (content) has
-  landed. The client hook (below) treats a non-empty `target_cities` with
-  no available city signal as **excluded** (fail closed — same rationale
-  as failing closed on `enabled`/loading state), so setting this column
-  today is a safe no-op, not a broken gate. Wiring in a real city source is
-  Phase 14 work, not part of this step.
+- `target_cities` — empty array means no city restriction. **Correction
+  made during implementation:** this was originally written assuming
+  neither `profiles` nor `places` had a city value to check against, with
+  `places.city` believed to be new schema arriving in Phase 14. That
+  assumption was wrong — `generate_typescript_types`, run while
+  implementing this step, showed `profiles.city text` already exists on
+  the live project (populated, currently `'Hyderabad'` on every row; no
+  app code in this repo selects or writes it, confirmed via a full-repo
+  grep before relying on it). Since real data is already there, gating is
+  wired up for real in this step rather than staying a no-op: the hook
+  reads `profile.city` (added to `useAuthStore`'s `Profile` type and
+  select clause) and checks it against `target_cities` the same way it
+  checks `target_roles`. CLAUDE.md's Phase 14 section still lists `city`
+  under "new `places` schema additions" — that line is stale and should be
+  corrected when Phase 14 starts or at this phase's wrap-up, not fixed
+  here (this step doesn't own Phase 14's planning text). With only one
+  city in the data today, a non-empty `target_cities` still can't be
+  exercised with real variation — that's a data-volume limitation, not a
+  code gap.
 - `enabled_at` — set by a trigger the moment a flag reaches
   `enabled = true` and `rollout_percentage = 100`; cleared back to `null`
   if the flag is ever dialed down below 100 again (a rollback resets the
@@ -79,8 +89,7 @@ function useFeatureFlag(key: string): boolean {
   //    inherits the app's global 2-minute default)
   // 2. if no row, or enabled === false → false
   // 3. if target_roles is non-empty and profile.role isn't in it → false
-  // 4. if target_cities is non-empty and there's no resolvable city
-  //    signal for this user yet → false (see schema note above)
+  // 4. if target_cities is non-empty and profile.city isn't in it → false
   // 5. otherwise: hash(`${key}:${userId}`) % 100 < rollout_percentage
 }
 ```
@@ -91,8 +100,8 @@ Two deliberate departures from the v1.0 sketch:
   just `userId`. Hashing only the user id would put the same users in the
   "on" bucket for every 50%-rollout flag at once — independent flags should
   bucket independently.
-- **Fails closed.** While the query is loading, or on any missing data
-  (no row, no profile, no city signal), the hook returns `false`. A gated
+- **Fails closed.** While the query is loading, or on any missing data (no
+  row, no profile, no `profile.city`), the hook returns `false`. A gated
   feature stays hidden rather than flashing on and then off.
 
 No per-hook `staleTime` override — same as every other hook in this
@@ -147,9 +156,13 @@ more column and a trigger, and a more careful hash.
 
 - Any in-app admin UI for toggling flags — dashboard only, per confirmed
   decision.
-- Actually resolving a user's city (Phase 13 location work / Phase 14
-  `places.city` — this step only adds the column and the fail-closed
-  check).
+- `expo-location` / device-detected city (Phase 13 scope) — city gating
+  here uses `profiles.city`, the value already on the account, not the
+  user's live location.
 - Automated flag-retirement enforcement (CI failing on a stale flag,
   Slack reminders, etc.) — the documented query + skill is enough for this
   team's size.
+- Correcting CLAUDE.md's Phase 14 section, which still describes
+  `places.city` as new schema to be added — it already exists (see the
+  `target_cities` note above). Out of scope for this step; worth fixing at
+  Phase 14 kickoff or this phase's wrap-up.

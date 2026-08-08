@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test:e2e": "bash scripts/test-e2e.sh",
-    "types:supabase": "supabase gen types typescript --project-id jgksopmbfttqqngrsama --schema public > lib/database.types.ts"
+    "types:supabase": "supabase gen types typescript --project-id jgksopmbfttqqngrsama --schema public > src/shared/supabase/database.types.ts"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",

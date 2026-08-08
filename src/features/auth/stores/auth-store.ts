@@ -8,6 +8,7 @@ export type Profile = {
   role: string | null;
   onboarded: boolean | null;
   avatar_url: string | null;
+  city: string | null;
 };
 
 type AuthState = {
@@ -46,7 +47,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, role, onboarded, avatar_url')
+      .select('id, display_name, role, onboarded, avatar_url, city')
       .eq('id', session.user.id)
       .maybeSingle();
 
